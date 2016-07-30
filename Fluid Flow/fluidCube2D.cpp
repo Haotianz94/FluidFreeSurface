@@ -156,9 +156,9 @@ void FluidCube2D::vel_step()
 	
 	projectVelosity();
 
-	advectVelosity();
 	SWAP(Vx0, Vx);
 	SWAP(Vy0, Vy);
+	advectVelosity();
 	
 	projectVelosity();
 
@@ -181,21 +181,23 @@ void FluidCube2D::diffuseVelosity()
 
 void FluidCube2D::advectVelosity()
 {
+	//BFECC
+	/*
 	advect(1, Vx0, fai_b, true);
 	advect(1, fai_b, fai_f, false);
 	for(int i = 0; i < size; i++)
 		fai_b[i] = Vx0[i] + (Vx0[i] - fai_f[i]) * 0.5;
 	advect(1, fai_b, Vx, true);
 
-
 	advect(2, Vy0, fai_b, true);
 	advect(2, fai_b, fai_f, false);
 	for(int i = 0; i < size; i++)
 		fai_b[i] = Vy0[i] + (Vy0[i] - fai_f[i]) * 0.5;
 	advect(2, fai_b, Vy, true);
+	*/
 
-	//advect(1, Vx0, Vx, true);
-	//advect(2, Vy0, Vy, true);
+	advect(1, Vx0, Vx, true);
+	advect(2, Vy0, Vy, true);
 }
 
 void FluidCube2D::projectVelosity()

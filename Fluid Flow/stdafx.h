@@ -10,9 +10,9 @@
 //#define GAUSS_SEIDEL 1
 
 #ifdef SIMULATION_2D
-	#define _W 300 
-	#define _H 300 
-	#define GRIDSIZE 2
+	#define _W 500 
+	#define _H 500
+	#define GRIDSIZE 1
 	#define VISCOSITY 0.0001
 	#define TIMESTEP 0.05
 	#define ITERATION 30
