@@ -8,14 +8,13 @@
 
 #ifdef SIMULATION_2D
 
-FluidCube2D::FluidCube2D(float diffusion, float viscosity, float dtime)
+FluidCube2D::FluidCube2D(float viscosity, float dtime)
 {
 	size = (_W+2) * (_H+2);
 	h = 1.0 / _H;
 	h2 = h * h;
 	hi = 1 / h;
 	dt = dtime;
-	diff = diffusion;
 	visc = viscosity;
 
 	max_vx = 0;
@@ -28,10 +27,8 @@ FluidCube2D::FluidCube2D(float diffusion, float viscosity, float dtime)
 	type = new GRIDTYPE [size];
 
 	//Advection using BFECC
-	Vx_b = new float [size];
-	Vx_f = new float [size];
-	Vy_b = new float [size];
-	Vy_f = new float [size];
+	fai_b = new float [size];
+	fai_f = new float [size];
 
 	//Projection using Conjugate Gradient
 	dir[0] = Pos(0, -1);
@@ -62,10 +59,11 @@ FluidCube2D::FluidCube2D(float diffusion, float viscosity, float dtime)
 
 	//init fluid
 	
+	/*
 	for(int y = _H/2.0; y <= _H/4.0*3; y++)
 		for(int x = _W/4.0; x <= _W/4.0*3; x++)
 			particles.push_back(Pos((x+0.5), (y+0.5)));
-	
+	*/
 	/*
 	for(int y = 1; y <= _H/3.0; y++)
 		for(int x = 1; x <= _W; x++)
@@ -74,6 +72,10 @@ FluidCube2D::FluidCube2D(float diffusion, float viscosity, float dtime)
 		for(int x = _W/6.0*2; x <= _W/6.0*4; x++)
 			particles.push_back(Pos((x+0.5), (y+0.5)));	
 	*/
+
+	for(int y = 1; y <= _H/3.0; y++)
+		for(int x = 1; x <= _W/4.0; x++)
+			particles.push_back(Pos((x+0.5), (y+0.5)));
 
 #ifdef OBSTACLE
 	int cx = _W / 2.0;
@@ -118,10 +120,8 @@ FluidCube2D::FluidCube2D(float diffusion, float viscosity, float dtime)
 	memset(Vx0, 0, sizeof(float) * size);
 	memset(Vy0, 0, sizeof(float) * size);
 
-	memset(Vx_b, 0, sizeof(float) * size);
-	memset(Vx_f, 0, sizeof(float) * size);
-	memset(Vy_b, 0, sizeof(float) * size);
-	memset(Vy_f, 0, sizeof(float) * size);
+	memset(fai_b, 0, sizeof(float) * size);
+	memset(fai_f, 0, sizeof(float) * size);
 }
 
 FluidCube2D::~FluidCube2D()
@@ -139,10 +139,8 @@ FluidCube2D::~FluidCube2D()
 	delete [] neighNoneSolid;
 	delete [] neighAir;
 
-	delete [] Vx_b;
-	delete [] Vx_f;
-	delete [] Vy_b;
-	delete [] Vy_f;
+	delete [] fai_b;
+	delete [] fai_f;
 
 	delete [] type0;
 
@@ -171,7 +169,7 @@ void FluidCube2D::addForce()
 {
 	for(int y = 1; y <= _H; y++)
 		for(int x = 1; x <= _W; x++)
-			if(type[IX(x, y)] == FLUID)// && type[IX(x, y-1)] == AIR)
+			if(type[IX(x, y)] == FLUID && type[IX(x, y-1)] != SOLID)
 				Vy[IX(x, y)] -= dt * GRAVITY;
 }
 
@@ -183,21 +181,21 @@ void FluidCube2D::diffuseVelosity()
 
 void FluidCube2D::advectVelosity()
 {
-	/*advect(1, Vx0, Vx_b, true);
-	advect(1, Vx_b, Vx_f, false);
+	advect(1, Vx0, fai_b, true);
+	advect(1, fai_b, fai_f, false);
 	for(int i = 0; i < size; i++)
-		Vx0[i] = Vx0[i] + (Vx0[i] - Vx_f[i]) * 0.5;
-	advect(1, Vx0, Vx, true);
+		fai_b[i] = Vx0[i] + (Vx0[i] - fai_f[i]) * 0.5;
+	advect(1, fai_b, Vx, true);
 
 
-	advect(2, Vy0, Vy_b, true);
-	advect(2, Vy_b, Vy_f, false);
+	advect(2, Vy0, fai_b, true);
+	advect(2, fai_b, fai_f, false);
 	for(int i = 0; i < size; i++)
-		Vy0[i] = Vy0[i] + (Vy0[i] - Vy_f[i]) * 0.5;
-	advect(2, Vy0, Vy, true);*/
+		fai_b[i] = Vy0[i] + (Vy0[i] - fai_f[i]) * 0.5;
+	advect(2, fai_b, Vy, true);
 
-	advect(1, Vx, Vx0, true);
-	advect(2, Vy, Vy0, true);
+	//advect(1, Vx0, Vx, true);
+	//advect(2, Vy0, Vy, true);
 }
 
 void FluidCube2D::projectVelosity()
@@ -387,7 +385,7 @@ void FluidCube2D::diffuse(int b, float *u0, float *u, float diffusion)
 	}
 }
 
-void FluidCube2D::advect(int b, float *u0, float *u, bool backward)
+void FluidCube2D::advect(int b, float *u0, float *u,  bool backward)
 {
 	for(int y = 1; y <= _H; y++)
 		for(int x = 1; x <= _W; x++)
@@ -397,7 +395,7 @@ void FluidCube2D::advect(int b, float *u0, float *u, bool backward)
 		
 			Pos pos = traceParticle(b, x, y, backward);
 		
-			u[IX(x, y)] = getVelosity(b, pos.x, pos.y);
+			u[IX(x, y)] = getVelosity(b, pos.x, pos.y, u0);
 
 			/*if(x0 < 0.5)
 				x0 = 0.5;
@@ -653,8 +651,8 @@ void FluidCube2D::updateParticles()
 	{
 		float x0 = particles[i].x;
 		float y0 = particles[i].y;
-		float vx0 = getVelosity(1, x0, y0);
-		float vy0 = getVelosity(2, x0, y0);
+		float vx0 = getVelosity(1, x0, y0, Vx);
+		float vy0 = getVelosity(2, x0, y0, Vy);
 
 		float x1 = x0 + dt * vx0 * hi;
 		float y1 = y0 + dt * vy0 * hi;
@@ -679,8 +677,8 @@ void FluidCube2D::updateParticles()
 			continue;
 		}
 
-		float vx1 = getVelosity(1, x1, y1);
-		float vy1 = getVelosity(2, x1, y1);
+		float vx1 = getVelosity(1, x1, y1, Vx);
+		float vy1 = getVelosity(2, x1, y1, Vy);
 		//if particle out of boundary???
 
 		x1 = x0 + dt * 0.5 * (vx0 + vx1) * hi;
@@ -765,7 +763,7 @@ void FluidCube2D::updateGrid()
 					if( x0 <= x + 0.5)
 					{
 						nx ++;
-						vx += getVelosity(1, x0, y0);
+						vx += getVelosity(1, x0, y0, Vx);
 					}
 					if(x0 - x < dist)
 					{
@@ -781,7 +779,7 @@ void FluidCube2D::updateGrid()
 					if(x0 >= x - 0.5)
 					{
 						nx ++;
-						vx += getVelosity(1, x0, y0);
+						vx += getVelosity(1, x0, y0, Vx);
 					}
 				}
 				if(nx > 0)
@@ -789,7 +787,7 @@ void FluidCube2D::updateGrid()
 				else
 				{
 					//for simple only take the nearest particle in the cell
-					Vx[IX(x, y)] = getVelosity(1, particles[pid].x, particles[pid].y);
+					Vx[IX(x, y)] = getVelosity(1, particles[pid].x, particles[pid].y, Vx);
 				}
 
 				dist = 100;
@@ -802,7 +800,7 @@ void FluidCube2D::updateGrid()
 					if( y0 <= y + 0.5)
 					{
 						ny ++;
-						vy += getVelosity(2, x0, y0);
+						vy += getVelosity(2, x0, y0, Vy);
 					}
 					if(y0 - y < dist)
 					{
@@ -818,7 +816,7 @@ void FluidCube2D::updateGrid()
 					if(y0 >= y - 0.5)
 					{
 						ny ++;
-						vy += getVelosity(2, x0, y0);
+						vy += getVelosity(2, x0, y0, Vy);
 					}
 				}
 				if(ny > 0)
@@ -826,7 +824,7 @@ void FluidCube2D::updateGrid()
 				else
 				{
 					//for simple only take the nearest particle in the cell
-					Vy[IX(x, y)] = getVelosity(2, particles[pid].x, particles[pid].y);
+					Vy[IX(x, y)] = getVelosity(2, particles[pid].x, particles[pid].y, Vy);
 				}
 			}
 		}
@@ -875,7 +873,7 @@ void FluidCube2D::updateGrid()
 
 }
 
-float FluidCube2D::getVelosity(int index, float x, float y)
+float FluidCube2D::getVelosity(int index, float x, float y, float *u)
 {
 	if(x < 0 || x > _W+1 || y < 0 || y > _H+1)
 	{
@@ -883,16 +881,13 @@ float FluidCube2D::getVelosity(int index, float x, float y)
 		*(int*)0 = 0;
 	}
 
-	float *u;
 	if(index == 1)
 	{
 		y -= 0.5;
-		u = Vx;
 	}
 	else
 	{
 		x -= 0.5;
-		u = Vy;
 	}
 	int i0 = int(x), i1 = i0 + 1;
 	int j0 = int(y), j1 = j0 + 1;
@@ -903,9 +898,9 @@ float FluidCube2D::getVelosity(int index, float x, float y)
 		   s1 * (t0*u[IX(i1,j0)] + t1*u[IX(i1,j1)]);
 }
 
-Velo FluidCube2D::getVelosity(float x, float y)
+Velo FluidCube2D::getVelosity(float x, float y, float *vx, float *vy)
 {
-	return Velo(getVelosity(1,x,y), getVelosity(2,x,y));
+	return Velo(getVelosity(1,x,y,vx), getVelosity(2,x,y,vy));
 }
 
 Pos FluidCube2D::traceParticle(int index, int x, int y, bool backward)
@@ -921,11 +916,11 @@ Pos FluidCube2D::traceParticle(int index, int x, int y, bool backward)
 		x0 = x + 0.5;
 		y0 = y;
 	}
-	Velo v0 = getVelosity(x0, y0);
+	Velo v0 = getVelosity(x0, y0, Vx0, Vy0);
 	float t = (backward)? -dt : dt;
 	//
 	Pos p = Pos(x0 + v0.x*t*hi, y0 + v0.y*t*hi);
-	Velo v1 = getVelosity(x0 + v0.x*t*hi, y0 + v0.y*t*hi);
+	Velo v1 = getVelosity(x0 + v0.x*t*hi, y0 + v0.y*t*hi, Vx0, Vy0);
 	return Pos(x0 + 0.5*t*(v0.x+v1.x)*hi, y0 + 0.5*t*(v0.y+v1.y)*hi);
 }
 #endif

@@ -24,7 +24,6 @@ private:
 	float hi;
 	float h2;
 	float dt;
-	float diff;
 	float visc;
 
 	float *Vx;
@@ -45,10 +44,8 @@ private:
 	Eigen::SparseLU<Eigen::SparseMatrix<double>> solver;
 
 	//Advection using BFECC
-	float *Vx_b;
-	float *Vx_f;
-	float *Vy_b;
-	float *Vy_f;
+	float *fai_b;
+	float *fai_f;
 
 	//MAC
 	std::vector<Pos> particles;
@@ -64,8 +61,8 @@ private:
 	void calculateTimeStep();
 	void updateParticles();
 	void updateGrid();
-	float getVelosity(int index, float x, float y);
-	Velo getVelosity(float x, float y);
+	float getVelosity(int index, float x, float y, float *u);
+	Velo getVelosity(float x, float y, float *vx, float *vy);
 	Pos traceParticle(int index, int x, int y, bool backward);
 
 	void vel_step();
@@ -86,7 +83,7 @@ private:
 	void output(float *u);
 
 public:
-	FluidCube2D(float diffusion, float viscosity, float dt);
+	FluidCube2D(float viscosity, float dt);
 	~FluidCube2D();
 	void simulate();
 };

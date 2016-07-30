@@ -10,12 +10,11 @@
 //#define GAUSS_SEIDEL 1
 
 #ifdef SIMULATION_2D
-	#define _W 100 
-	#define _H 100 
-	#define GRIDSIZE 6
-	#define DIFFUSION 0.01
-	#define VISCOSITY 0.01
-	#define TIMESTEP 0.01
+	#define _W 300 
+	#define _H 300 
+	#define GRIDSIZE 2
+	#define VISCOSITY 0.0001
+	#define TIMESTEP 0.05
 	#define ITERATION 30
 	#define FRAMERATE 32
 	#define DRAGSCALE 100
@@ -23,7 +22,7 @@
 	#define SPEED 10000
 	#define OBSTACLEX 30
 
-	#define GRAVITY 9.8
+	#define GRAVITY 20
 
 #ifdef CONNECTED
 	#define IX(x, y) ( (x) == 0? _W + (y) * (_W+2) : ((x) == _W+1? 1 + (y) * (_W+2) : (x) + (y) * (_W+2)) )
