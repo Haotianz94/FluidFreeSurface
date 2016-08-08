@@ -14,8 +14,14 @@ struct Pos
 	Pos() {}
 	Pos(float _x, float _y): x(_x), y(_y) {}
 };
-
 typedef Pos Velo;
+
+enum GRIDTYPE
+{
+	FLUID,
+	AIR,
+	SOLID
+};
 
 class FluidCube2D
 {
@@ -42,6 +48,7 @@ private:
 	int *pos2index;
 	Eigen::SparseMatrix<double> A;
 	Eigen::SparseLU<Eigen::SparseMatrix<double>> solver;
+	Eigen::VectorXd p;
 
 	//Advection using BFECC
 	float *fai_b;

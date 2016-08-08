@@ -58,25 +58,24 @@ FluidCube2D::FluidCube2D(float viscosity, float dtime)
 			type[IX(x,y)] = AIR;
 
 	//init fluid
-	
+	//water fall
 	/*
 	for(int y = _H/2.0; y <= _H/4.0*3; y++)
 		for(int x = _W/4.0; x <= _W/4.0*3; x++)
 			particles.push_back(Pos((x+0.5), (y+0.5)));
 	*/
-	/*
+	//contain bottom
+	
 	for(int y = 1; y <= _H/3.0; y++)
 		for(int x = 1; x <= _W; x++)
 			particles.push_back(Pos((x+0.5), (y+0.5)));
-	for(int y = _H/2.0; y <= _H/4.0*3; y++)
-		for(int x = _W/6.0*2; x <= _W/6.0*4; x++)
-			particles.push_back(Pos((x+0.5), (y+0.5)));	
-	*/
-
+	
+	//dam break
+	/*
 	for(int y = 1; y <= _H/3.0; y++)
 		for(int x = 1; x <= _W/4.0; x++)
 			particles.push_back(Pos((x+0.5), (y+0.5)));
-
+	*/
 #ifdef OBSTACLE
 	int cx = _W / 2.0;
 	int cy = _H / 3.0;
@@ -169,7 +168,7 @@ void FluidCube2D::addForce()
 {
 	for(int y = 1; y <= _H; y++)
 		for(int x = 1; x <= _W; x++)
-			if(type[IX(x, y)] == FLUID && type[IX(x, y-1)] != SOLID)
+			if(type[IX(x, y)] == FLUID)
 				Vy[IX(x, y)] -= dt * GRAVITY;
 }
 
@@ -205,7 +204,7 @@ void FluidCube2D::projectVelosity()
 
 	max_vx = 0;
 	max_vy = 0;
-	float *div = Vy0;
+	float *div = fai_b;
 
 #ifdef GAUSS_SEIDEL
 	//Gauss_Seidel
@@ -280,14 +279,14 @@ void FluidCube2D::projectVelosity()
 	//Conjugate Gradient
 
 	//check div before project
-	/*for(int y = 1; y <= _H; y++)
+	for(int y = 1; y <= _H; y++)
 		for(int x = 1; x <= _W; x++)
 		{
 			if(type[IX(x, y)] != FLUID)
 				continue;
-			div[IX(x, y)] = 0.5 * (Vx[IX(x+1,y)]-Vx[IX(x-1,y)] + Vy[IX(x,y+1)]-Vy[IX(x,y-1)]);
+			div[IX(x, y)] = 0.5 * (Vx[IX(x+1,y)]-Vx[IX(x-1,y)] + Vy[IX(x,y+1)]-Vy[IX(x,y-1)] / h2);
 		}
-	output(div);*/
+	output(div);
 
 	Eigen::VectorXd b(fluidNum);
 	int index = 0;
@@ -299,7 +298,7 @@ void FluidCube2D::projectVelosity()
 
 			b[index++] =  -h * (Vx[IX(x+1,y)]-Vx[IX(x,y)] + Vy[IX(x,y+1)]-Vy[IX(x,y)]);
 		}
-	Eigen::VectorXd p(fluidNum);
+	p.resize(fluidNum);
 	p = solver.solve(b);
 	
 	//for(int i = 100; i < 110; i++)
@@ -342,19 +341,17 @@ void FluidCube2D::projectVelosity()
 			if(fabsf(Vy[IX(x, y)]) > max_vy)
 				max_vy = fabsf(Vy[IX(x, y)]);
 		}
-	//set_bnd(1, Vx);
-	//set_bnd(2, Vy);
 
 	//check div after project
-	/*for(int y = 1; y <= _H; y++)
+	for(int y = 1; y <= _H; y++)
 		for(int x = 1; x <= _W; x++)
 		{
 			if(type[IX(x, y)] != FLUID)
 				continue;
-			div[IX(x, y)] = 0.5 * (Vx[IX(x+1,y)]-Vx[IX(x-1,y)] + Vy[IX(x,y+1)]-Vy[IX(x,y-1)]);
+			div[IX(x, y)] = 0.5 * (Vx[IX(x+1,y)]-Vx[IX(x-1,y)] + Vy[IX(x,y+1)]-Vy[IX(x,y-1)] / h2);
 		}
 	output(div);
-	int stop = 0;*/
+	int stop = 0;
 #endif
 
 }
@@ -518,10 +515,10 @@ void FluidCube2D::output(float *u)
 {
 #ifdef OUTPUT 
 	for(int y = 10; y <= 15; y++)
-		for(int x = 40; x <= 45; x++)
+		for(int x = 5; x <= 10; x++)
 		{
 			std::cout<<u[IX(x, y)]<<' ';
-			if(x == 15)
+			if(x == 10)
 				std::cout<<std::endl;
 		}
 	PRINT("=================================\n");
@@ -560,6 +557,12 @@ void FluidCube2D::draw_dens()
 	REPORT(max_vx);
 	REPORT(max_vy);
 
+	float max_p = -1;
+	for(int i = 0; i < fluidNum; i++)
+		if(p[i] > max_p)
+			max_p = p[i];
+	REPORT(max_p);
+
 	for(int i = 0; i <= _W+1; i++)
 		for(int j = 0; j <= _H+1; j++)
 		{
@@ -568,9 +571,11 @@ void FluidCube2D::draw_dens()
 			float color;
 
 			if(type[IX(x, y)] == SOLID)
-				glColor3f(0, 0.5, 0); 
+				glColor3f(0, 0.5, 0);
+			
 			else if(type[IX(x, y)] == FLUID)
-				glColor3f(0, 0, 0.5);
+				//glColor3f(0, 0, 0.5);
+				glColor3f(p[pos2index[IX(x,y)]]/max_p, 0, 0);
 			else
 				glColor3f(0.5, 0.5, 0.5);
 				//vorticity

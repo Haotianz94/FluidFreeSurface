@@ -6,14 +6,14 @@
 #define SIMULATION_2D 1
 //#define CONNECTED 1
 //#define OBSTACLE 1
-//#define OUTPUT 1
+#define OUTPUT 1
 //#define GAUSS_SEIDEL 1
 
 #ifdef SIMULATION_2D
 	#define _W 500 
 	#define _H 500
 	#define GRIDSIZE 1
-	#define VISCOSITY 0.0001
+	#define VISCOSITY 0.001
 	#define TIMESTEP 0.05
 	#define ITERATION 30
 	#define FRAMERATE 32
@@ -44,16 +44,8 @@
 	#define IX(x, y, z) ((x) + (y)*(_N+2) + (z)*(_N+2)*(_N+2) )
 #endif
 
-enum GRIDTYPE
-{
-	FLUID,
-	AIR,
-	SOLID
-};
-
 #define PI 3.14159265
 #define LENGTH _N*GRIDSIZE
-//#define eps 1e-10
 #define SWAP(x0, x) {float *tmp = x0; x0 = x; x = tmp;}
 
 //system output defines
