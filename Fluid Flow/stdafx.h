@@ -6,23 +6,25 @@
 #define SIMULATION_2D 1
 //#define CONNECTED 1
 //#define OBSTACLE 1
-#define OUTPUT 1
+//#define OUTPUT 1
 //#define GAUSS_SEIDEL 1
 
 #ifdef SIMULATION_2D
-	#define _W 500 
-	#define _H 500
-	#define GRIDSIZE 1
-	#define VISCOSITY 0.001
+	#define _W 10 
+	#define _H 10
+	#define _L 1.0
+ 	#define GRIDSIZE 50
+	#define VISCOSITY 1
 	#define TIMESTEP 0.05
 	#define ITERATION 30
 	#define FRAMERATE 32
+	
 	#define DRAGSCALE 100
-	#define FLOWTIME 10
-	#define SPEED 10000
-	#define OBSTACLEX 30
+	//#define FLOWTIME 10
+	//#define SPEED 10000
+	//#define OBSTACLEX 30
 
-	#define GRAVITY 20
+	#define GRAVITY 9.8
 
 #ifdef CONNECTED
 	#define IX(x, y) ( (x) == 0? _W + (y) * (_W+2) : ((x) == _W+1? 1 + (y) * (_W+2) : (x) + (y) * (_W+2)) )

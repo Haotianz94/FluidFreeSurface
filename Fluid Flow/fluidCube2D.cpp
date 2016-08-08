@@ -11,7 +11,7 @@
 FluidCube2D::FluidCube2D(float viscosity, float dtime)
 {
 	size = (_W+2) * (_H+2);
-	h = 1.0 / _H;
+	h = _L / _H;
 	h2 = h * h;
 	hi = 1 / h;
 	dt = dtime;
@@ -148,18 +148,29 @@ FluidCube2D::~FluidCube2D()
 void FluidCube2D::vel_step()
 {
 	addForce();
+	//set_bnd();
 
 	SWAP(Vx0, Vx);
 	SWAP(Vy0, Vy);
 	diffuseVelosity();
-	
-	projectVelosity();
+	set_bnd();
+
+	//draw_dens();
+
+	//projectVelosity();
+	//set_bnd();
+	//draw_dens();
 
 	SWAP(Vx0, Vx);
 	SWAP(Vy0, Vy);
 	advectVelosity();
-	
+	set_bnd();
+
+	//draw_dens();
+
 	projectVelosity();
+
+	//draw_dens();
 
 	int stop = 0;
 }
@@ -284,7 +295,7 @@ void FluidCube2D::projectVelosity()
 		{
 			if(type[IX(x, y)] != FLUID)
 				continue;
-			div[IX(x, y)] = 0.5 * (Vx[IX(x+1,y)]-Vx[IX(x-1,y)] + Vy[IX(x,y+1)]-Vy[IX(x,y-1)] / h2);
+			div[IX(x, y)] = 0.5 * (Vx[IX(x+1,y)]-Vx[IX(x-1,y)] + Vy[IX(x,y+1)]-Vy[IX(x,y-1)]);
 		}
 	output(div);
 
@@ -304,7 +315,31 @@ void FluidCube2D::projectVelosity()
 	//for(int i = 100; i < 110; i++)
 	//	cout<<p[i]<<' ';
 	//cout<<endl;
-	//cout<<p<<endl;
+	/*
+	std::cout<<"bbbbbbb"<<std::endl;
+	for(int y = 1; y <= _H; y++)
+		for(int x = 1; x <= _W; x++)
+		{
+			if(type[IX(x, y)] != FLUID)
+				continue;
+
+			std::cout<<b[pos2index[IX(x,y)]]<<std::endl;
+			if(x == _W)
+				std::cout<<std::endl;
+		}
+	
+	std::cout<<"ppppppp"<<std::endl;
+	for(int y = 1; y <= _H; y++)
+		for(int x = 1; x <= _W; x++)
+		{
+			if(type[IX(x, y)] != FLUID)
+				continue;
+
+			std::cout<<p[pos2index[IX(x,y)]]<<std::endl;
+			if(x == _W)
+				std::cout<<std::endl;
+		}
+	*/
 
 	for(int y = 1; y <= _H; y++)
 		for(int x = 1; x <= _W; x++)
@@ -348,7 +383,7 @@ void FluidCube2D::projectVelosity()
 		{
 			if(type[IX(x, y)] != FLUID)
 				continue;
-			div[IX(x, y)] = 0.5 * (Vx[IX(x+1,y)]-Vx[IX(x-1,y)] + Vy[IX(x,y+1)]-Vy[IX(x,y-1)] / h2);
+			div[IX(x, y)] = 0.5 * (Vx[IX(x+1,y)]-Vx[IX(x-1,y)] + Vy[IX(x,y+1)]-Vy[IX(x,y-1)]);
 		}
 	output(div);
 	int stop = 0;
@@ -365,7 +400,8 @@ void FluidCube2D::diffuse(int b, float *u0, float *u, float diffusion)
 			for(int x = 1; x <= _W; x++)
 				if(type[IX(x, y)] == FLUID)
 				{
-					//u[IX(x, y)] = (u0[IX(x, y)] + a * (u[IX(x-1, y)]+u[IX(x+1, y)]+u[IX(x,y-1)]+u[IX(x,y+1)])) / (1+4*a);
+					//Gauss Seidel relexation
+					/*
 					int fnum = 0;
 					float v = 0;
 					for(int i = 0; i < 4; i++)
@@ -379,8 +415,20 @@ void FluidCube2D::diffuse(int b, float *u0, float *u, float diffusion)
 						}
 					}
 					u[IX(x, y)] = (u0[IX(x, y)] + a * v) / (1+fnum*a);
+					*/
 					//can also try unstable way
+					u[IX(x, y)] = u0[IX(x, y)];
+					for(int i = 0; i < 4; i++)
+					{
+						int xx = x + dir[i].x;
+						int yy = y + dir[i].y;
+						if(type[IX(xx, yy)] == FLUID)
+						{
+							u[IX(x, y)] += a * (u0[IX(xx, yy)] - u0[IX(x, y)]);
+						}
+					}
 				}
+		//REPORT(u[IX(_W/2, 10)]);
 	}
 }
 
@@ -557,11 +605,11 @@ void FluidCube2D::draw_dens()
 	REPORT(max_vx);
 	REPORT(max_vy);
 
-	float max_p = -1;
+	/*float max_p = -1;
 	for(int i = 0; i < fluidNum; i++)
 		if(p[i] > max_p)
 			max_p = p[i];
-	REPORT(max_p);
+	REPORT(max_p);*/
 
 	for(int i = 0; i <= _W+1; i++)
 		for(int j = 0; j <= _H+1; j++)
@@ -574,8 +622,8 @@ void FluidCube2D::draw_dens()
 				glColor3f(0, 0.5, 0);
 			
 			else if(type[IX(x, y)] == FLUID)
-				//glColor3f(0, 0, 0.5);
-				glColor3f(p[pos2index[IX(x,y)]]/max_p, 0, 0);
+				glColor3f(1, 1, 0);
+				//glColor3f(p[pos2index[IX(x,y)]]/max_p, 0, 0);
 			else
 				glColor3f(0.5, 0.5, 0.5);
 				//vorticity
@@ -589,8 +637,8 @@ void FluidCube2D::draw_dens()
 			glVertex2f(i*GRIDSIZE, (j+1)*GRIDSIZE);
 			glEnd();
 
-			//if(GRIDSIZE >= 10 && type[IX(x, y)] == FLUID)
-			//	draw_velo(i, j, Vx[IX(x, y)], Vy[IX(x, y)]);
+			if(GRIDSIZE >= 10)
+				draw_velo(i, j, Vx[IX(x, y)], Vy[IX(x, y)]);
 		}
 
 	glutSwapBuffers();
@@ -598,14 +646,16 @@ void FluidCube2D::draw_dens()
 
 void FluidCube2D::draw_velo(int i, int j, float vx, float vy)
 {
-	float cx = (i+0.5) * GRIDSIZE;
-	float cy = (j+0.5) * GRIDSIZE;
+	float x1 = i * GRIDSIZE;
+	float y1 = (j+0.5) * GRIDSIZE;
+	float x2 = (i+0.5) * GRIDSIZE;
+	float y2 = j * GRIDSIZE;
 	float vl = sqrtf(vx*vx + vy*vy);
 	//float seita = atanf(fabs(vy / vx));
 
-	float max_v = max_vx > max_vy? max_vx : max_vy;
-	if(max_v == 0)
-		return;
+	//float max_v = max_vx > max_vy? max_vx : max_vy;
+	//if(max_v == 0)
+	//	return;
 
 	/*if(fabs(vx) < eps && fabs(vy) < eps)
 		return;
@@ -615,21 +665,26 @@ void FluidCube2D::draw_velo(int i, int j, float vx, float vy)
 	float dy = 0.6 * GRIDSIZE * (logf(fabsf(vy))+LOG) / max_v * ((vy>0)? 1:-1);
 	*/
 
-	float dx = 0.5 * GRIDSIZE * vx / vl;
-	float dy = 0.5 * GRIDSIZE * vy / vl;
+	float dx = 0.5 * GRIDSIZE * vx;
+	float dy = 0.5 * GRIDSIZE * vy;
 
 	//float dx = 20 * GRIDSIZE * vx ;
 	//float dy = 20 * GRIDSIZE * vy ;
 
 	glBegin(GL_LINES);
 	glColor3f(1.0f, 0.0f, 0.0f);
-	glVertex2f(cx, cy);
-	//glColor3f(0.0f, 0.0f, 1.0f);
-	glVertex2f(cx + dx, cy + dy);
+	glVertex2f(x1, y1);
+	glVertex2f(x1 + dx, y1);
 	
 	glColor3f(0.0f, 0.0f, 1.0f);
-	glVertex2f(cx, cy);
-	glVertex2f(cx - vx/vl*GRIDSIZE*0.2, cy - vy/vl*GRIDSIZE*0.2);
+	glVertex2f(x2, y2);
+	glVertex2f(x2, y2 + dy);
+	glEnd();
+
+	glBegin(GL_POINTS);
+	glColor3f(0, 0, 0);
+	glVertex2f(x1, y1);
+	glVertex2f(x2, y2);
 	glEnd();
 }
 
@@ -664,19 +719,18 @@ void FluidCube2D::updateParticles()
 		float x1 = x0 + dt * vx0 * hi;
 		float y1 = y0 + dt * vy0 * hi;
 		//if particle out of boundary??
-		/*if(x1 < 1 || x1 > _W || y1 < 1 || y1 > _H)
+		if(x1 < 1 || x1 >= _W+1 || y1 < 1 || y1 >= _H+1)
 		{
 			std::cout<<"out of bound"<<std::endl;
-			*(int*)0 = 0;
-		}*/
+		}
 		if(x1 < 1)
 			x1 = 1;
-		if(x1 > _W)
-			x1 = _W;
+		if(x1 >= _W+1)
+			x1 = _W+0.999;
 		if(y1 < 1)
 			y1 = 1;
-		if(y1 > _H)
-			y1 = _H;
+		if(y1 >= _H+1)
+			y1 = _H+0.999;
 
 		if(type[IX(int(x1), int(y1))] != FLUID)
 		{
@@ -687,17 +741,21 @@ void FluidCube2D::updateParticles()
 		float vx1 = getVelosity(1, x1, y1, Vx);
 		float vy1 = getVelosity(2, x1, y1, Vy);
 		//if particle out of boundary???
+		if(x1 < 1 || x1 >= _W+1 || y1 < 1 || y1 >= _H+1)
+		{
+			std::cout<<"out of bound"<<std::endl;
+		}
 
 		x1 = x0 + dt * 0.5 * (vx0 + vx1) * hi;
 		y1 = y0 + dt * 0.5 * (vy0 + vy1) * hi;
 		if(x1 < 1)
 			x1 = 1;
-		if(x1 > _W)
-			x1 = _W;
+		if(x1 >= _W+1)
+			x1 = _W+0.999;
 		if(y1 < 1)
 			y1 = 1;
-		if(y1 > _H)
-			y1 = _H;
+		if(y1 >= _H+1)
+			y1 = _H+0.999;
 		particles[i].x = x1;
 		particles[i].y = y1;
 	}
@@ -836,7 +894,7 @@ void FluidCube2D::updateGrid()
 			}
 		}
 
-		//init Matrix
+	//init Matrix
 	A = Eigen::SparseMatrix<double>(fluidNum, fluidNum);         // default is column major
 	A.reserve(Eigen::VectorXi::Constant(fluidNum, 5));
 	int index = 0;
@@ -882,10 +940,9 @@ void FluidCube2D::updateGrid()
 
 float FluidCube2D::getVelosity(int index, float x, float y, float *u)
 {
-	if(x < 0 || x > _W+1 || y < 0 || y > _H+1)
+	if(x < 0 || x >= _W+1 || y < 0 || y >= _H+1)
 	{
 		std::cout<<"out of bound"<<std::endl;
-		*(int*)0 = 0;
 	}
 
 	if(index == 1)
