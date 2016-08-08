@@ -148,14 +148,18 @@ FluidCube2D::~FluidCube2D()
 void FluidCube2D::vel_step()
 {
 	addForce();
-	//set_bnd();
+	set_bnd();
+
+	draw_dens();
 
 	SWAP(Vx0, Vx);
+	std::cout<<"aaa"<<std::endl;
 	SWAP(Vy0, Vy);
+	std::cout<<"bbb"<<std::endl;
 	diffuseVelosity();
 	set_bnd();
 
-	//draw_dens();
+	draw_dens();
 
 	//projectVelosity();
 	//set_bnd();
@@ -166,11 +170,11 @@ void FluidCube2D::vel_step()
 	advectVelosity();
 	set_bnd();
 
-	//draw_dens();
+	draw_dens();
 
 	projectVelosity();
 
-	//draw_dens();
+	draw_dens();
 
 	int stop = 0;
 }
@@ -290,7 +294,7 @@ void FluidCube2D::projectVelosity()
 	//Conjugate Gradient
 
 	//check div before project
-	for(int y = 1; y <= _H; y++)
+	/*for(int y = 1; y <= _H; y++)
 		for(int x = 1; x <= _W; x++)
 		{
 			if(type[IX(x, y)] != FLUID)
@@ -298,7 +302,7 @@ void FluidCube2D::projectVelosity()
 			div[IX(x, y)] = 0.5 * (Vx[IX(x+1,y)]-Vx[IX(x-1,y)] + Vy[IX(x,y+1)]-Vy[IX(x,y-1)]);
 		}
 	output(div);
-
+	*/
 	Eigen::VectorXd b(fluidNum);
 	int index = 0;
 	for(int y = 1; y <= _H; y++)
@@ -378,6 +382,7 @@ void FluidCube2D::projectVelosity()
 		}
 
 	//check div after project
+	/*
 	for(int y = 1; y <= _H; y++)
 		for(int x = 1; x <= _W; x++)
 		{
@@ -387,6 +392,7 @@ void FluidCube2D::projectVelosity()
 		}
 	output(div);
 	int stop = 0;
+	*/
 #endif
 
 }
@@ -394,8 +400,8 @@ void FluidCube2D::projectVelosity()
 void FluidCube2D::diffuse(int b, float *u0, float *u, float diffusion)
 {
 	float a = dt * diffusion / h2;
-	for(int k = 0; k < ITERATION; k++)
-	{
+	//for(int k = 0; k < ITERATION; k++)
+	//{
 		for(int y = 1; y <= _H; y++)
 			for(int x = 1; x <= _W; x++)
 				if(type[IX(x, y)] == FLUID)
@@ -429,7 +435,7 @@ void FluidCube2D::diffuse(int b, float *u0, float *u, float diffusion)
 					}
 				}
 		//REPORT(u[IX(_W/2, 10)]);
-	}
+	//}
 }
 
 void FluidCube2D::advect(int b, float *u0, float *u,  bool backward)
@@ -722,6 +728,9 @@ void FluidCube2D::updateParticles()
 		if(x1 < 1 || x1 >= _W+1 || y1 < 1 || y1 >= _H+1)
 		{
 			std::cout<<"out of bound"<<std::endl;
+			REPORT(x1);
+			REPORT(y1);
+			system("pause");
 		}
 		if(x1 < 1)
 			x1 = 1;
@@ -744,6 +753,9 @@ void FluidCube2D::updateParticles()
 		if(x1 < 1 || x1 >= _W+1 || y1 < 1 || y1 >= _H+1)
 		{
 			std::cout<<"out of bound"<<std::endl;
+			REPORT(x1);
+			REPORT(y1);
+			system("pause");
 		}
 
 		x1 = x0 + dt * 0.5 * (vx0 + vx1) * hi;
@@ -943,6 +955,9 @@ float FluidCube2D::getVelosity(int index, float x, float y, float *u)
 	if(x < 0 || x >= _W+1 || y < 0 || y >= _H+1)
 	{
 		std::cout<<"out of bound"<<std::endl;
+		REPORT(x);
+		REPORT(y);
+		system("pause");
 	}
 
 	if(index == 1)
