@@ -23,6 +23,13 @@ enum GRIDTYPE
 	SOLID
 };
 
+enum SCENETYPE
+{
+	WATERFALL,
+	CONTAINER,
+	DAMBREAK
+};
+
 class FluidCube2D
 {
 private:
@@ -58,6 +65,7 @@ private:
 	std::vector<Pos> particles;
 	GRIDTYPE *type0;
 	std::vector<int> **invertedList;
+	SCENETYPE scene;
 
 public:
 	int size;
@@ -92,9 +100,10 @@ private:
 	void output(float *u);
 
 public:
-	FluidCube2D(float viscosity, float dt);
+	FluidCube2D(float viscosity, float dt, SCENETYPE sc = CONTAINER);
 	~FluidCube2D();
 	void simulate();
+	void setScene(SCENETYPE sc) { scene = sc; }
 };
 
 #else

@@ -8,7 +8,7 @@
 
 #ifdef SIMULATION_2D
 
-FluidCube2D::FluidCube2D(float viscosity, float dtime)
+FluidCube2D::FluidCube2D(float viscosity, float dtime, SCENETYPE sc)
 {
 	size = (_W+2) * (_H+2);
 	h = _L / _H;
@@ -16,6 +16,7 @@ FluidCube2D::FluidCube2D(float viscosity, float dtime)
 	hi = 1 / h;
 	dt = dtime;
 	visc = viscosity;
+	scene = sc;
 
 	max_vx = 0;
 	max_vy = 0;
@@ -59,23 +60,27 @@ FluidCube2D::FluidCube2D(float viscosity, float dtime)
 
 	//init fluid
 	//water fall
-	/*
-	for(int y = _H/2.0; y <= _H/4.0*3; y++)
-		for(int x = _W/4.0; x <= _W/4.0*3; x++)
-			particles.push_back(Pos((x+0.5), (y+0.5)));
-	*/
+	if(scene == WATERFALL)
+	{
+		for(int y = _H/4.0; y <= _H/2.0; y++)
+			for(int x = _W/4.0; x <= _W/4.0*3; x++)
+				particles.push_back(Pos((x+0.5), (y+0.5)));
+	}
 	//contain bottom
-	
-	for(int y = 1; y <= _H/3.0; y++)
-		for(int x = 1; x <= _W; x++)
-			particles.push_back(Pos((x+0.5), (y+0.5)));
-	
+	else if(scene == CONTAINER)
+	{
+		for(int y = 1; y <= _H/3.0; y++)
+			for(int x = 1; x <= _W; x++)
+				particles.push_back(Pos((x+0.5), (y+0.5)));
+	}
 	//dam break
-	/*
-	for(int y = 1; y <= _H/3.0; y++)
-		for(int x = 1; x <= _W/4.0; x++)
-			particles.push_back(Pos((x+0.5), (y+0.5)));
-	*/
+	else if(scene == DAMBREAK)
+	{
+		for(int y = 1; y <= _H/3.0; y++)
+			for(int x = 1; x <= _W/4.0; x++)
+				particles.push_back(Pos((x+0.5), (y+0.5)));
+	}
+
 #ifdef OBSTACLE
 	int cx = _W / 2.0;
 	int cy = _H / 3.0;
@@ -170,7 +175,7 @@ void FluidCube2D::vel_step()
 	//draw_dens();
 
 	projectVelosity();
-
+	set_bnd();
 	//draw_dens();
 
 	errorRemove();
@@ -411,14 +416,16 @@ void FluidCube2D::projectVelosity()
 void FluidCube2D::diffuse(int b, float *u0, float *u, float diffusion)
 {
 	float a = dt * diffusion / h2;
-	//for(int k = 0; k < ITERATION; k++)
-	//{
+
+	//Gauss Seidel relexation
+	//in this way, the initcial value for u may be important 
+	/*
+	for(int k = 0; k < ITERATION; k++)
+	{
 		for(int y = 1; y <= _H; y++)
 			for(int x = 1; x <= _W; x++)
 				if(type[IX(x, y)] == FLUID)
-				{
-					//Gauss Seidel relexation
-					/*
+				{	
 					int fnum = 0;
 					float v = 0;
 					for(int i = 0; i < 4; i++)
@@ -432,21 +439,27 @@ void FluidCube2D::diffuse(int b, float *u0, float *u, float diffusion)
 						}
 					}
 					u[IX(x, y)] = (u0[IX(x, y)] + a * v) / (1+fnum*a);
-					*/
-					//can also try unstable way
-					u[IX(x, y)] = u0[IX(x, y)];
-					for(int i = 0; i < 4; i++)
-					{
-						int xx = x + dir[i].x;
-						int yy = y + dir[i].y;
-						if(type[IX(xx, yy)] == FLUID)
-						{
-							u[IX(x, y)] += a * (u0[IX(xx, yy)] - u0[IX(x, y)]);
-						}
-					}
 				}
-		//REPORT(u[IX(_W/2, 10)]);
-	//}
+	}
+	*/
+
+	//can also try unstable way
+	for(int y = 1; y <= _H; y++)
+		for(int x = 1; x <= _W; x++)
+			if(type[IX(x, y)] == FLUID)
+			{
+				u[IX(x, y)] = u0[IX(x, y)];
+				for(int i = 0; i < 4; i++)
+				{
+					int xx = x + dir[i].x;
+					int yy = y + dir[i].y;
+					if(type[IX(xx, yy)] == FLUID)
+					{
+						u[IX(x, y)] += a * (u0[IX(xx, yy)] - u0[IX(x, y)]);
+					}	
+				}
+			}
+					
 }
 
 void FluidCube2D::advect(int b, float *u0, float *u,  bool backward)
@@ -622,7 +635,7 @@ void FluidCube2D::draw_dens()
 	REPORT(max_vx);
 	REPORT(max_vy);
 
-	float max_p = -1;
+	float max_p = -9999;
 	for(int i = 0; i < fluidNum; i++)
 		if(p[i] > max_p)
 			max_p = p[i];
@@ -654,9 +667,13 @@ void FluidCube2D::draw_dens()
 			glVertex2f(i*GRIDSIZE, (j+1)*GRIDSIZE);
 			glEnd();
 
-			if(GRIDSIZE >= 10)
-				draw_velo(i, j, Vx[IX(x, y)], Vy[IX(x, y)]);
+			//if(GRIDSIZE >= 10 && type[IX(x, y)] == FLUID)
+			//	draw_velo(i, j, Vx[IX(x, y)], Vy[IX(x, y)]);
 		}
+
+	//draw particles
+	for(unsigned i = 0; i < particles.size(); i++)
+		for( int )
 
 	glutSwapBuffers();
 }
@@ -956,6 +973,10 @@ void FluidCube2D::updateGrid()
 			index ++;
 		}
 	//std::cout<<A<<std::endl;
+	//check symmetry
+	//for(int i = 0; i < fluidNum; i++)
+	//	for(int j = i+1; j < fluidNum; j++)
+	//		A.
 	A.makeCompressed();
 	solver.compute(A);
 
@@ -1016,7 +1037,7 @@ Pos FluidCube2D::traceParticle(int index, int x, int y, bool backward)
 
 void FluidCube2D::errorRemove()
 {
-	double eps = 1e-8;
+	double eps = 1e-12;
 
 	for(int i = 0; i < size; i++)
 	{
