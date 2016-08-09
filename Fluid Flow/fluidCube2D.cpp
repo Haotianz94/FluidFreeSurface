@@ -148,18 +148,15 @@ FluidCube2D::~FluidCube2D()
 void FluidCube2D::vel_step()
 {
 	addForce();
-	set_bnd();
 
-	draw_dens();
+	//draw_dens();
 
 	SWAP(Vx0, Vx);
-	std::cout<<"aaa"<<std::endl;
 	SWAP(Vy0, Vy);
-	std::cout<<"bbb"<<std::endl;
 	diffuseVelosity();
 	set_bnd();
 
-	draw_dens();
+	//draw_dens();
 
 	//projectVelosity();
 	//set_bnd();
@@ -170,13 +167,13 @@ void FluidCube2D::vel_step()
 	advectVelosity();
 	set_bnd();
 
-	draw_dens();
+	//draw_dens();
 
 	projectVelosity();
 
-	draw_dens();
+	//draw_dens();
 
-	int stop = 0;
+	errorRemove();
 }
 
 void FluidCube2D::addForce()
@@ -334,15 +331,29 @@ void FluidCube2D::projectVelosity()
 	
 	std::cout<<"ppppppp"<<std::endl;
 	for(int y = 1; y <= _H; y++)
+	{
+		float lastp = -1;
 		for(int x = 1; x <= _W; x++)
 		{
 			if(type[IX(x, y)] != FLUID)
 				continue;
 
-			std::cout<<p[pos2index[IX(x,y)]]<<std::endl;
-			if(x == _W)
-				std::cout<<std::endl;
+			//std::cout<<p[pos2index[IX(x,10)]]<<std::endl;
+			//if(x == _W)
+				//std::cout<<std::endl;
+			float curp = p[pos2index[IX(x,y)]];
+			if(x == 1)
+				lastp = curp;
+			else
+			{
+				if(curp != lastp)
+				{
+					std::cout<<x<<' '<<y<<' '<<lastp<<' '<<curp<<std::endl;
+					lastp = curp;
+				}
+			}
 		}
+	}
 	*/
 
 	for(int y = 1; y <= _H; y++)
@@ -351,7 +362,7 @@ void FluidCube2D::projectVelosity()
 			if(type[IX(x, y)] != FLUID)
 				continue;
 
-			float p1, p2;
+			double p1, p2;
 			p2 = p[pos2index[IX(x,y)]];
 			//Vx
 			if(type[IX(x-1, y)] == AIR)
@@ -611,11 +622,11 @@ void FluidCube2D::draw_dens()
 	REPORT(max_vx);
 	REPORT(max_vy);
 
-	/*float max_p = -1;
+	float max_p = -1;
 	for(int i = 0; i < fluidNum; i++)
 		if(p[i] > max_p)
 			max_p = p[i];
-	REPORT(max_p);*/
+	REPORT(max_p);
 
 	for(int i = 0; i <= _W+1; i++)
 		for(int j = 0; j <= _H+1; j++)
@@ -628,8 +639,8 @@ void FluidCube2D::draw_dens()
 				glColor3f(0, 0.5, 0);
 			
 			else if(type[IX(x, y)] == FLUID)
-				glColor3f(1, 1, 0);
-				//glColor3f(p[pos2index[IX(x,y)]]/max_p, 0, 0);
+				//glColor3f(1, 1, 0);
+				glColor3f(p[pos2index[IX(x,y)]]/max_p, 0, 0);
 			else
 				glColor3f(0.5, 0.5, 0.5);
 				//vorticity
@@ -1002,4 +1013,18 @@ Pos FluidCube2D::traceParticle(int index, int x, int y, bool backward)
 	Velo v1 = getVelosity(x0 + v0.x*t*hi, y0 + v0.y*t*hi, Vx0, Vy0);
 	return Pos(x0 + 0.5*t*(v0.x+v1.x)*hi, y0 + 0.5*t*(v0.y+v1.y)*hi);
 }
+
+void FluidCube2D::errorRemove()
+{
+	double eps = 1e-8;
+
+	for(int i = 0; i < size; i++)
+	{
+		if(fabs(Vx[i]) < eps)
+			Vx[i] = 0;
+		if(fabs(Vy[i]) < eps)
+			Vy[i] = 0;
+	}
+}
+
 #endif

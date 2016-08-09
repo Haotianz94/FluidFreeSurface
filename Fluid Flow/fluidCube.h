@@ -72,6 +72,8 @@ private:
 	Velo getVelosity(float x, float y, float *vx, float *vy);
 	Pos traceParticle(int index, int x, int y, bool backward);
 
+	void errorRemove();
+
 	void vel_step();
 	void addForce();
 	void diffuseVelosity();
