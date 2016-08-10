@@ -225,7 +225,7 @@ void FluidCube2D::projectVelosity()
 
 #ifdef GAUSS_SEIDEL
 	//Gauss_Seidel
-	float *p = Vx0;
+	float *p = fai_f;
 	//float *div = Vy0;
 
 	for(int y = 1; y <= _H; y++)
@@ -234,46 +234,18 @@ void FluidCube2D::projectVelosity()
 			if(type[IX(x, y)] != FLUID)
 				continue;
 
-			div[IX(x, y)] = -0.5 * h * (Vx[IX(x+1,y)]-Vx[IX(x-1,y)] + Vy[IX(x,y+1)]-Vy[IX(x,y-1)]);
+			div[IX(x, y)] = -h * (Vx[IX(x+1,y)]-Vx[IX(x,y)] + Vy[IX(x,y+1)]-Vy[IX(x,y)]);
 			p[IX(x, y)] = 0;
 		}
-	set_bnd(0, div);
-	set_bnd(0, p);
-
-	//output(div);
+	//set_bnd(0, div);
+	//set_bnd(0, p);
 	
 	for(int k = 0; k < ITERATION; k++)
 	{
 		for(int y = 1; y <= _H; y++)
 			for(int x = 1; x <= _W; x++)
 				if(type[IX(x, y)] == FLUID)
-					p[IX(x, y)] = (div[IX(x,y)] + p[IX(x-1,y)] + p[IX(x+1,y)] + p[IX(x,y-1)] + p[IX(x,y+1)]) / 4;
-		//keep balance
-		/*if(k % 1 == 0)
-		{
-   			for(int y = 1; y <= _H; y++)
-				for(int x = 1; x <= _W; x++)
-					p[IX(x, y)] = (div[IX(x,y)] + p[IX(x-1,y)] + p[IX(x+1,y)] + p[IX(x,y-1)] + p[IX(x,y+1)]) / 4;
-		}
-		else if(k % 4 == 1)
-		{
-			for(int y = _N; y >= 1; y--)
-				for(int x = _N; x >= 1; x--)
-					p[IX(x, y)] = (div[IX(x,y)] + p[IX(x-1,y)] + p[IX(x+1,y)] + p[IX(x,y-1)] + p[IX(x,y+1)]) / 4;
-		}
-		else if(k % 4 == 2)
-		{
-			for(int y = 1; y <= _N; y++)
-				for(int x = _N; x >= 1; x--)
-					p[IX(x, y)] = (div[IX(x,y)] + p[IX(x-1,y)] + p[IX(x+1,y)] + p[IX(x,y-1)] + p[IX(x,y+1)]) / 4;
-		}
-		else
-		{
-			for(int y = _N; y >= 1; y--)
-				for(int x = 1; x <= _N; x++)
-					p[IX(x, y)] = (div[IX(x,y)] + p[IX(x-1,y)] + p[IX(x+1,y)] + p[IX(x,y-1)] + p[IX(x,y+1)]) / 4;
-		}*/
-		set_bnd(0, p);
+					p[IX(x, y)] = (div[IX(x,y)] + p[IX(x,y)] + p[IX(x+1,y)] + p[IX(x,y)] + p[IX(x,y+1)]) / 4;
 	}
  
 	for(int y = 1; y <= _H; y++)
@@ -282,16 +254,37 @@ void FluidCube2D::projectVelosity()
 			if(type[IX(x, y)] != FLUID)
 				continue;
 
-			Vx[IX(x, y)] -= 0.5 * (p[IX(x+1,y)] - p[IX(x-1,y)]) / h;
-			Vy[IX(x, y)] -= 0.5 * (p[IX(x,y+1)] - p[IX(x,y-1)]) / h;
+			double p1, p2;
+			p2 = p[IX(x,y)];
+			//Vx
+			if(type[IX(x-1, y)] == AIR)
+				p1 = 0;
+			else if(type[IX(x-1, y)] == FLUID)
+				p1 = p[IX(x-1,y)];
+			else
+				p1 = p[IX(x,y)];
+			Vx[IX(x, y)] -= (p2 - p1) * hi;
+			
+			//Vy
+			if(type[IX(x, y-1)] == AIR)
+				p1 = 0;
+			else if(type[IX(x, y-1)] == SOLID)
+				p1 = p[IX(x,y)];
+			else
+			{
+				if(type[IX(x, y-1)] != FLUID)
+					*(int*)0 = 0;
+				p1 = p[IX(x,y-1)];
+			}
+			Vy[IX(x, y)] -= (p2 - p1) * hi;
 
 			if(fabsf(Vx[IX(x, y)]) > max_vx)
 				max_vx = fabsf(Vx[IX(x, y)]);
 			if(fabsf(Vy[IX(x, y)]) > max_vy)
 				max_vy = fabsf(Vy[IX(x, y)]);
 		}
-	set_bnd(1, Vx);
-	set_bnd(2, Vy);
+	//set_bnd(1, Vx);
+	//set_bnd(2, Vy);
 #else
 	//Conjugate Gradient
 
@@ -513,16 +506,30 @@ void FluidCube2D::advect(int b, float *u0, float *u,  bool backward)
 
 void FluidCube2D::set_bnd()
 {
+	//try to use free-slip condition
+
+
+	for(int y = 1; y <= _H; y++)
+	{
+		Vx[IX(1, y)] = -Vx[IX(2, y)];
+		Vx[IX(_W+1, y)] = -Vx[IX(_W, y)];
+	}
+	for(int x = 1; x <= _W; x++)
+	{
+		Vy[IX(x, 1)] = -Vy[IX(x, 2)];
+		Vy[IX(x, _H+1)] = -Vy[IX(x, _H)];
+	}
+
 	for(int y = 1; y <= _H; y++)
 		for(int x = 1; x <= _W; x++)
 		{
 			if(type[IX(x, y)] != FLUID)
 				continue;
 
-			if(type[IX(x-1, y)] == SOLID)
-				Vx[IX(x, y)] = 0;
-			if(type[IX(x, y-1)] == SOLID)
-				Vy[IX(x, y)] = 0;
+			//if(type[IX(x-1, y)] == SOLID)
+			//	Vx[IX(x, y)] = 0;
+			//if(type[IX(x, y-1)] == SOLID)
+			//	Vy[IX(x, y)] = 0;
 
 			switch(neighAir[IX(x, y)])
 			{
@@ -555,6 +562,7 @@ void FluidCube2D::set_bnd()
 					Vy[IX(x,y+1)] = Vy[IX(x,y)];
 				break;
 			case 3:
+				/*
 				if(type[IX(x+1, y)] != AIR)
 					Vx[IX(x,y)] = Vx[IX(x+1,y)] + Vy[IX(x,y+1)] - Vy[IX(x,y)];
 				else if(type[IX(x-1, y)] != AIR)
@@ -563,6 +571,16 @@ void FluidCube2D::set_bnd()
 					Vy[IX(x,y)] = Vy[IX(x,y+1)] + Vx[IX(x+1,y)] - Vx[IX(x,y)];
 				else if(type[IX(x, y-1)] != AIR)
 					Vy[IX(x,y+1)] = Vy[IX(x,y)] - Vx[IX(x+1,y)] + Vx[IX(x,y)];
+				break;
+				*/
+				if(type[IX(x+1, y)] != AIR)
+					Vx[IX(x,y)] = Vx[IX(x+1,y)];
+				else if(type[IX(x-1, y)] != AIR)
+					Vx[IX(x+1,y)] = Vx[IX(x,y)];
+				else if(type[IX(x, y+1)] != AIR)
+					Vy[IX(x,y)] = Vy[IX(x,y+1)];
+				else if(type[IX(x, y-1)] != AIR)
+					Vy[IX(x,y+1)] = Vy[IX(x,y)];
 				break;
 			case 4:
 				break;
@@ -640,7 +658,15 @@ void FluidCube2D::draw_dens()
 		if(p[i] > max_p)
 			max_p = p[i];
 	REPORT(max_p);
-
+	
+	/*
+	float *p = fai_f;
+	for(int y = 1; y <= _H; y++)
+		for(int x = 1; x <= _W; x++)
+			if(p[IX(x, y)] > max_p)
+				max_p = p[IX(x, y)];
+	REPORT(max_p);
+	*/
 	for(int i = 0; i <= _W+1; i++)
 		for(int j = 0; j <= _H+1; j++)
 		{
@@ -654,6 +680,7 @@ void FluidCube2D::draw_dens()
 			else if(type[IX(x, y)] == FLUID)
 				//glColor3f(1, 1, 0);
 				glColor3f(p[pos2index[IX(x,y)]]/max_p, 0, 0);
+				//glColor3f(p[IX(x,y)]/max_p, 0, 0);
 			else
 				glColor3f(0.5, 0.5, 0.5);
 				//vorticity
@@ -672,9 +699,15 @@ void FluidCube2D::draw_dens()
 		}
 
 	//draw particles
+	/*
+	glColor3f(1, 1, 1);
+	glBegin(GL_POINTS);
 	for(unsigned i = 0; i < particles.size(); i++)
-		for( int )
-
+	{
+		glVertex2f(particles[i].x*GRIDSIZE, particles[i].y*GRIDSIZE);
+	}
+	glEnd();
+	*/
 	glutSwapBuffers();
 }
 
