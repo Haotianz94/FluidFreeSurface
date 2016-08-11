@@ -47,14 +47,14 @@ private:
 	float max_vy;
 	
 	//Projection using Conjugate Gradient
-	Pos dir[4];
+	Eigen::Vector2i dir[4];
 	int fluidNum;
 	int **neighbor;
 	int *neighNoneSolid;
 	int *neighAir;
 	int *pos2index;
 	Eigen::SparseMatrix<double> A;
-	Eigen::SparseLU<Eigen::SparseMatrix<double>> solver;
+	Eigen::ConjugateGradient<Eigen::SparseMatrix<double>> solver;
 	Eigen::VectorXd p;
 
 	//Advection using BFECC

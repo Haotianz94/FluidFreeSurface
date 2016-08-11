@@ -32,10 +32,10 @@ FluidCube2D::FluidCube2D(float viscosity, float dtime, SCENETYPE sc)
 	fai_f = new float [size];
 
 	//Projection using Conjugate Gradient
-	dir[0] = Pos(0, -1);
-	dir[1] = Pos(-1, 0);
-	dir[2] = Pos(1, 0);
-	dir[3] = Pos(0, 1);
+	dir[0] = Eigen::Vector2i(0, -1);
+	dir[1] = Eigen::Vector2i(-1, 0);
+	dir[2] = Eigen::Vector2i(1, 0);
+	dir[3] = Eigen::Vector2i(0, 1);
 	pos2index = new int [size]; 
 	neighNoneSolid = new int [size];
 	neighAir = new int [size];
@@ -63,7 +63,7 @@ FluidCube2D::FluidCube2D(float viscosity, float dtime, SCENETYPE sc)
 	if(scene == WATERFALL)
 	{
 		for(int y = _H/4.0; y <= _H/2.0; y++)
-			for(int x = _W/4.0; x <= _W/4.0*3; x++)
+			for(int x = _W/4.0; x <= _W/2.0; x++)
 				particles.push_back(Pos((x+0.5), (y+0.5)));
 	}
 	//contain bottom
@@ -153,13 +153,14 @@ FluidCube2D::~FluidCube2D()
 void FluidCube2D::vel_step()
 {
 	addForce();
+	set_bnd();
 
 	//draw_dens();
 
-	SWAP(Vx0, Vx);
-	SWAP(Vy0, Vy);
-	diffuseVelosity();
-	set_bnd();
+	//SWAP(Vx0, Vx);
+	//SWAP(Vy0, Vy);
+	//diffuseVelosity();
+	//set_bnd();
 
 	//draw_dens();
 
@@ -167,10 +168,10 @@ void FluidCube2D::vel_step()
 	//set_bnd();
 	//draw_dens();
 
-	SWAP(Vx0, Vx);
-	SWAP(Vy0, Vy);
-	advectVelosity();
-	set_bnd();
+	//SWAP(Vx0, Vx);
+	//SWAP(Vy0, Vy);
+	//advectVelosity();
+	//set_bnd();
 
 	//draw_dens();
 
@@ -308,6 +309,9 @@ void FluidCube2D::projectVelosity()
 
 			b[index++] =  -h * (Vx[IX(x+1,y)]-Vx[IX(x,y)] + Vy[IX(x,y+1)]-Vy[IX(x,y)]);
 		}
+	
+	//std::cout<<b<<std::endl;
+
 	p.resize(fluidNum);
 	p = solver.solve(b);
 	
@@ -377,12 +381,9 @@ void FluidCube2D::projectVelosity()
 			else if(type[IX(x, y-1)] == SOLID)
 				p1 = p[pos2index[IX(x,y)]];
 			else
-			{
-				if(type[IX(x, y-1)] != FLUID)
-					*(int*)0 = 0;
 				p1 = p[pos2index[IX(x,y-1)]];
-			}
 			Vy[IX(x, y)] -= (p2 - p1) * hi;
+		
 
 			if(fabsf(Vx[IX(x, y)]) > max_vx)
 				max_vx = fabsf(Vx[IX(x, y)]);
@@ -444,8 +445,8 @@ void FluidCube2D::diffuse(int b, float *u0, float *u, float diffusion)
 				u[IX(x, y)] = u0[IX(x, y)];
 				for(int i = 0; i < 4; i++)
 				{
-					int xx = x + dir[i].x;
-					int yy = y + dir[i].y;
+					int xx = x + dir[i][0];
+					int yy = y + dir[i][1];
 					if(type[IX(xx, yy)] == FLUID)
 					{
 						u[IX(x, y)] += a * (u0[IX(xx, yy)] - u0[IX(x, y)]);
@@ -507,8 +508,7 @@ void FluidCube2D::advect(int b, float *u0, float *u,  bool backward)
 void FluidCube2D::set_bnd()
 {
 	//try to use free-slip condition
-
-
+	/*
 	for(int y = 1; y <= _H; y++)
 	{
 		Vx[IX(1, y)] = -Vx[IX(2, y)];
@@ -519,17 +519,17 @@ void FluidCube2D::set_bnd()
 		Vy[IX(x, 1)] = -Vy[IX(x, 2)];
 		Vy[IX(x, _H+1)] = -Vy[IX(x, _H)];
 	}
-
+	*/
 	for(int y = 1; y <= _H; y++)
 		for(int x = 1; x <= _W; x++)
 		{
 			if(type[IX(x, y)] != FLUID)
 				continue;
 
-			//if(type[IX(x-1, y)] == SOLID)
-			//	Vx[IX(x, y)] = 0;
-			//if(type[IX(x, y-1)] == SOLID)
-			//	Vy[IX(x, y)] = 0;
+			if(type[IX(x-1, y)] == SOLID)
+				Vx[IX(x, y)] = 0;
+			if(type[IX(x, y-1)] == SOLID)
+				Vy[IX(x, y)] = 0;
 
 			switch(neighAir[IX(x, y)])
 			{
@@ -679,8 +679,12 @@ void FluidCube2D::draw_dens()
 			
 			else if(type[IX(x, y)] == FLUID)
 				//glColor3f(1, 1, 0);
-				glColor3f(p[pos2index[IX(x,y)]]/max_p, 0, 0);
+				//glColor3f(p[pos2index[IX(x,y)]]/max_p, 0, 0);
 				//glColor3f(p[IX(x,y)]/max_p, 0, 0);
+				if(Vy[IX(x, y)] >= 0)
+					glColor3f(Vy[IX(x, y)]/max_vy, 0, 0);
+				else
+					glColor3f(0, -Vy[IX(x, y)]/max_vy, 0);
 			else
 				glColor3f(0.5, 0.5, 0.5);
 				//vorticity
@@ -876,8 +880,8 @@ void FluidCube2D::updateGrid()
 				neighAir[IX(x, y)] = 0;
 				for(int i = 0; i < 4; i++)
 				{
-					int xx = x+dir[i].x;
-					int yy = y+dir[i].y;
+					int xx = x+dir[i][0];
+					int yy = y+dir[i][1];
 					neighbor[IX(x,y)][i] = pos2index[IX(xx, yy)];
 					if(type[IX(xx,yy)] != SOLID)
 						neighNoneSolid[IX(x, y)] ++;

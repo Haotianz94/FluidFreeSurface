@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "display.h"
+#include <Eigen\Eigen>
 
 int main(int argc, char* argv[])
 {
