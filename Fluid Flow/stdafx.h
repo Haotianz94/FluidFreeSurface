@@ -6,7 +6,7 @@
 #define SIMULATION_2D 1
 //#define CONNECTED 1
 //#define OBSTACLE 1
-//#define OUTPUT 1
+#define OUTPUT 1
 //#define GAUSS_SEIDEL 1
 
 #ifdef SIMULATION_2D
@@ -14,10 +14,10 @@
 	#define _H 200
 	#define _L 1.0
  	#define GRIDSIZE 3
-	#define VISCOSITY 0.0001
-	#define TIMESTEP 0.05
+	#define VISCOSITY 0.00001
+	//#define TIMESTEP 0.05
 	#define ITERATION 30
-	#define FRAMERATE 32
+	#define FRAMERATE 20
 	
 	#define DRAGSCALE 100
 	//#define FLOWTIME 10
@@ -26,16 +26,9 @@
 
 	#define GRAVITY 9.8
 
-#ifdef CONNECTED
-	#define IX(x, y) ( (x) == 0? _W + (y) * (_W+2) : ((x) == _W+1? 1 + (y) * (_W+2) : (x) + (y) * (_W+2)) )
-#else	
 	#define IX(x, y) ( (x) + (y) * (_W+2) )
-#endif
 	#define BOUNDED(x, y) ( (type[IX(int(x),int(y))] == SOLID || type[IX(int(x)+1,int(y)+1)] == SOLID)? false : true)
-	
-#define DISTANCE(x1, y1, x2, y2) ( sqrtf((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2)) )
-	
-	//int IX(float x, float y);
+	#define DISTANCE(x1, y1, x2, y2) ( sqrtf((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2)) )
 #else
 	#define _N 40
 	#define GRIDSIZE 20

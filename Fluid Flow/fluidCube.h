@@ -66,7 +66,10 @@ private:
 	std::vector<Pos> particles;
 	GRIDTYPE *type0;
 	std::vector<int> **invertedList;
+	
 	SCENETYPE scene;
+	float ctime;
+	float frameTime;
 
 public:
 	int size;
@@ -74,7 +77,7 @@ public:
 	float *Vy0;
 
 private:
-	void calculateTimeStep();
+	bool calculateTimeStep();
 	void updateParticles();
 	void updateGrid();
 	float getVelosity(int index, float x, float y, float *u);
@@ -101,7 +104,7 @@ private:
 	void output(float *u);
 
 public:
-	FluidCube2D(float viscosity, float dt, SCENETYPE sc = CONTAINER);
+	FluidCube2D(float viscosity, float fr, SCENETYPE sc = CONTAINER);
 	~FluidCube2D();
 	void simulate();
 	void setScene(SCENETYPE sc) { scene = sc; }

@@ -27,7 +27,7 @@ void initialize(){
 
 	wide = (_W+2) * GRIDSIZE + 20;
 	height = (_H+2) * GRIDSIZE + 20;
-	cube = new FluidCube2D(VISCOSITY, TIMESTEP, DAMBREAK);
+	cube = new FluidCube2D(VISCOSITY, FRAMERATE, DAMBREAK);
 
 	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE |GLUT_RGBA  | GLUT_STENCIL
                       | GLUT_ACCUM);
