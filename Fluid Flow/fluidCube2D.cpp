@@ -827,7 +827,7 @@ void FluidCube2D::updateParticles()
 		//if particle out of boundary??
 		if(x1 < 1 || x1 >= _W+1 || y1 < 1 || y1 >= _H+1)
 		{
-			std::cout<<"out of bound"<<std::endl;
+			std::cout<<"Particle out of bound"<<std::endl;
 			REPORT(x1);
 			REPORT(y1);
 			system("pause");
@@ -852,7 +852,7 @@ void FluidCube2D::updateParticles()
 		//if particle out of boundary???
 		if(x1 < 1 || x1 >= _W+1 || y1 < 1 || y1 >= _H+1)
 		{
-			std::cout<<"out of bound"<<std::endl;
+			std::cout<<"Particle out of bound"<<std::endl;
 			REPORT(x1);
 			REPORT(y1);
 			system("pause");
@@ -945,9 +945,16 @@ void FluidCube2D::updateGrid()
 						nx ++;
 						vx += getVelosity(1, x0, y0, Vx);
 					}
+					/*
 					if(DISTANCE(x0, y0, x, y+0.5)< dist)
 					{
 						dist = DISTANCE(x0, y0, x, y+0.5);
+						pid = list->at(i);
+					}
+					*/
+					if(x0 - x < dist)
+					{
+						dist = x0 - x;
 						pid = list->at(i);
 					}
 				}
@@ -961,9 +968,16 @@ void FluidCube2D::updateGrid()
 						nx ++;
 						vx += getVelosity(1, x0, y0, Vx);
 					}
+					/*
 					if(DISTANCE(x0, y0, x, y+0.5) < dist)
 					{
 						dist = DISTANCE(x0, y0, x, y+0.5);
+						pid = list->at(i);
+					}
+					*/
+					if(x - x0 < dist)
+					{
+						dist = x - x0;
 						pid = list->at(i);
 					}
 				}
@@ -987,9 +1001,16 @@ void FluidCube2D::updateGrid()
 						ny ++;
 						vy += getVelosity(2, x0, y0, Vy);
 					}
+					/*
 					if(DISTANCE(x0, y0, x+0.5, y) < dist)
 					{
 						dist = DISTANCE(x0, y0, x+0.5, y);
+						pid = list->at(i);
+					}
+					*/
+					if(y0 - y < dist)
+					{
+						dist = y0 - y;
 						pid = list->at(i);
 					}
 				}
@@ -1003,9 +1024,16 @@ void FluidCube2D::updateGrid()
 						ny ++;
 						vy += getVelosity(2, x0, y0, Vy);
 					}
+					/*
 					if(DISTANCE(x0, y0, x+0.5, y) < dist)
 					{
 						dist = DISTANCE(x0, y0, x+0.5, y);
+						pid = list->at(i);
+					}
+					*/
+					if(y - y0 < dist)
+					{
+						dist = y - y0;
 						pid = list->at(i);
 					}
 				}
