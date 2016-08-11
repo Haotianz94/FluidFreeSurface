@@ -59,12 +59,23 @@ FluidCube2D::FluidCube2D(float viscosity, float dtime, SCENETYPE sc)
 			type[IX(x,y)] = AIR;
 
 	//init fluid
-	//water fall
-	if(scene == WATERFALL)
+	//cube fall
+	if(scene == CUBEFALL)
 	{
 		for(int y = _H/4.0; y <= _H/2.0; y++)
-			for(int x = _W/4.0; x <= _W/2.0; x++)
+			for(int x = _W/3.0; x <= _W/3.0*2; x++)
 				particles.push_back(Pos((x+0.5), (y+0.5)));
+	}
+	//sphere fall
+	else if(scene == SPHEREFALL)
+	{
+		int cx = _W/2;
+		int cy = _H/2;
+		float R = _W/6;
+		for(int y = 1; y <= _H; y++)
+			for(int x = 1; x <= _W; x++)
+				if(DISTANCE(x,y,cx,cy) <= R)
+					particles.push_back(Pos((x+0.5), (y+0.5)));
 	}
 	//contain bottom
 	else if(scene == CONTAINER)
@@ -153,14 +164,14 @@ FluidCube2D::~FluidCube2D()
 void FluidCube2D::vel_step()
 {
 	addForce();
-	set_bnd();
+	//set_bnd();
 
 	//draw_dens();
 
-	//SWAP(Vx0, Vx);
-	//SWAP(Vy0, Vy);
-	//diffuseVelosity();
-	//set_bnd();
+	SWAP(Vx0, Vx);
+	SWAP(Vy0, Vy);
+	diffuseVelosity();
+	set_bnd();
 
 	//draw_dens();
 
@@ -168,10 +179,10 @@ void FluidCube2D::vel_step()
 	//set_bnd();
 	//draw_dens();
 
-	//SWAP(Vx0, Vx);
-	//SWAP(Vy0, Vy);
-	//advectVelosity();
-	//set_bnd();
+	SWAP(Vx0, Vx);
+	SWAP(Vy0, Vy);
+	advectVelosity();
+	set_bnd();
 
 	//draw_dens();
 
@@ -678,13 +689,13 @@ void FluidCube2D::draw_dens()
 				glColor3f(0, 0.5, 0);
 			
 			else if(type[IX(x, y)] == FLUID)
-				//glColor3f(1, 1, 0);
+				glColor3f(0, 0, 0.7);
 				//glColor3f(p[pos2index[IX(x,y)]]/max_p, 0, 0);
 				//glColor3f(p[IX(x,y)]/max_p, 0, 0);
-				if(Vy[IX(x, y)] >= 0)
-					glColor3f(Vy[IX(x, y)]/max_vy, 0, 0);
-				else
-					glColor3f(0, -Vy[IX(x, y)]/max_vy, 0);
+				//if(Vy[IX(x, y)] >= 0)
+				//	glColor3f(Vy[IX(x, y)]/max_vy, 0, 0);
+				//else
+				//	glColor3f(0, -Vy[IX(x, y)]/max_vy, 0);
 			else
 				glColor3f(0.5, 0.5, 0.5);
 				//vorticity
@@ -923,10 +934,15 @@ void FluidCube2D::updateGrid()
 						nx ++;
 						vx += getVelosity(1, x0, y0, Vx);
 					}
+					if(x - x0 < dist)
+					{
+						dist = x - x0;
+						pid = list->at(i);
+					}
 				}
-				if(nx > 0)
-					Vx[IX(x, y)] = vx / nx;
-				else
+				//if(nx > 0)
+				//	Vx[IX(x, y)] = vx / nx;
+				//else
 				{
 					//for simple only take the nearest particle in the cell
 					Vx[IX(x, y)] = getVelosity(1, particles[pid].x, particles[pid].y, Vx);
@@ -960,10 +976,15 @@ void FluidCube2D::updateGrid()
 						ny ++;
 						vy += getVelosity(2, x0, y0, Vy);
 					}
+					if(y - y0 < dist)
+					{
+						dist = y - y0;
+						pid = list->at(i);
+					}
 				}
-				if(ny > 0)
-					Vy[IX(x, y)] = vy / ny;
-				else
+				//if(ny > 0)
+				//	Vy[IX(x, y)] = vy / ny;
+				//else
 				{
 					//for simple only take the nearest particle in the cell
 					Vy[IX(x, y)] = getVelosity(2, particles[pid].x, particles[pid].y, Vy);
