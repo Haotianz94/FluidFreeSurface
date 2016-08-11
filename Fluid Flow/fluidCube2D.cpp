@@ -169,16 +169,16 @@ FluidCube2D::~FluidCube2D()
 
 void FluidCube2D::vel_step()
 {
-	addForce();
+	
 	//set_bnd();
 
 	//draw_dens();
-
+	/*
 	SWAP(Vx0, Vx);
 	SWAP(Vy0, Vy);
 	diffuseVelosity();
 	set_bnd();
-
+	*/
 	//draw_dens();
 
 	//projectVelosity();
@@ -191,6 +191,8 @@ void FluidCube2D::vel_step()
 	set_bnd();
 
 	//draw_dens();
+	addForce();
+	set_bnd();
 
 	projectVelosity();
 	set_bnd();
@@ -1098,14 +1100,6 @@ void FluidCube2D::updateGrid()
 
 float FluidCube2D::getVelosity(int index, float x, float y, float *u)
 {
-	if(x < 0 || x >= _W+1 || y < 0 || y >= _H+1)
-	{
-		std::cout<<"Get velosity out of bound"<<std::endl;
-		REPORT(x);
-		REPORT(y);
-		system("pause");
-	}
-
 	if(index == 1)
 	{
 		y -= 0.5;
@@ -1114,6 +1108,15 @@ float FluidCube2D::getVelosity(int index, float x, float y, float *u)
 	{
 		x -= 0.5;
 	}
+
+	if(x < 0 || x >= _W+1 || y < 0 || y >= _H+1)
+	{
+		std::cout<<"Get velosity out of bound"<<std::endl;
+		REPORT(x);
+		REPORT(y);
+		system("pause");
+	}
+
 	int i0 = int(x), i1 = i0 + 1;
 	int j0 = int(y), j1 = j0 + 1;
 	float s1 = x - i0, s0 = 1 - s1;
@@ -1144,7 +1147,7 @@ Pos FluidCube2D::traceParticle(int index, int x, int y, bool backward)
 	Velo v0 = getVelosity(x0, y0, Vx0, Vy0);
 	float t = (backward)? -dt : dt;
 	//
-	Pos p = Pos(x0 + v0.x*t*hi, y0 + v0.y*t*hi);
+	//Pos p = Pos(x0 + v0.x*t*hi, y0 + v0.y*t*hi);
 	Velo v1 = getVelosity(x0 + v0.x*t*hi, y0 + v0.y*t*hi, Vx0, Vy0);
 	return Pos(x0 + 0.5*t*(v0.x+v1.x)*hi, y0 + 0.5*t*(v0.y+v1.y)*hi);
 }
