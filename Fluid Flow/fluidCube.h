@@ -85,6 +85,7 @@ private:
 	Pos traceParticle(int index, int x, int y, bool backward);
 
 	void errorRemove();
+	void fillParticleInGrid(int x, int y);
 
 	void vel_step();
 	void addForce();

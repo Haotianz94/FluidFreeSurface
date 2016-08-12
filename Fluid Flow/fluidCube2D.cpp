@@ -65,7 +65,7 @@ FluidCube2D::FluidCube2D(float viscosity, float fr, SCENETYPE sc)
 	{
 		for(int y = _H/4.0; y <= _H/2.0; y++)
 			for(int x = _W/3.0; x <= _W/3.0*2; x++)
-				particles.push_back(Pos((x+0.5), (y+0.5)));
+				fillParticleInGrid(x, y);
 	}
 	//sphere fall
 	else if(scene == SPHEREFALL)
@@ -75,28 +75,27 @@ FluidCube2D::FluidCube2D(float viscosity, float fr, SCENETYPE sc)
 		float R = _W/6;
 		for(int y = 1; y <= _H; y++)
 			for(int x = 1; x <= _W; x++)
-				if(DISTANCE(x,y,cx,cy) <= R)
-					particles.push_back(Pos((x+0.5), (y+0.5)));
+				fillParticleInGrid(x, y);
 	}
 	//contain bottom
 	else if(scene == CONTAINER)
 	{
-		/*
+		
 		for(int y = _H/3.0; y <= _H/2.0; y++)
 			for(int x = _W/3.0; x <= _W/3.0*2; x++)
-				particles.push_back(Pos((x+0.5), (y+0.5)));
-		*/
+				fillParticleInGrid(x, y);
+		
 
 		for(int y = 1; y <= _H/4.0; y++)
 			for(int x = 1; x <= _W; x++)
-				particles.push_back(Pos((x+0.5), (y+0.5)));
+				fillParticleInGrid(x, y);
 	}
 	//dam break
 	else if(scene == DAMBREAK)
 	{
 		for(int y = 1; y <= _H/3.0*2; y++)
 			for(int x = 1; x <= _W/4.0; x++)
-				particles.push_back(Pos((x+0.5), (y+0.5)));
+				fillParticleInGrid(x, y);
 	}
 
 #ifdef OBSTACLE
@@ -169,34 +168,23 @@ FluidCube2D::~FluidCube2D()
 
 void FluidCube2D::vel_step()
 {
-	
-	//set_bnd();
-
-	//draw_dens();
 	/*
 	SWAP(Vx0, Vx);
 	SWAP(Vy0, Vy);
 	diffuseVelosity();
 	set_bnd();
 	*/
-	//draw_dens();
-
-	//projectVelosity();
-	//set_bnd();
-	//draw_dens();
 
 	SWAP(Vx0, Vx);
 	SWAP(Vy0, Vy);
 	advectVelosity();
 	set_bnd();
 
-	//draw_dens();
 	addForce();
 	set_bnd();
 
 	projectVelosity();
 	set_bnd();
-	//draw_dens();
 
 	errorRemove();
 }
@@ -678,7 +666,8 @@ void FluidCube2D::draw_dens()
 	REPORT(max_p);
 	*/
 
-	//check div after project
+	/*
+	//calculate divergence
 	float *div = fai_b;
 	for(int y = 1; y <= _H; y++)
 		for(int x = 1; x <= _W; x++)
@@ -687,6 +676,7 @@ void FluidCube2D::draw_dens()
 				continue;
 			div[IX(x, y)] = (Vx[IX(x+1,y)]-Vx[IX(x,y)] + Vy[IX(x,y+1)]-Vy[IX(x,y)]);
 		}
+	*/
 
 	for(int i = 0; i <= _W+1; i++)
 		for(int j = 0; j <= _H+1; j++)
@@ -698,18 +688,24 @@ void FluidCube2D::draw_dens()
 			if(type[IX(x, y)] == SOLID)
 				glColor3f(0, 0.5, 0);
 			
-			else if(type[IX(x, y)] == FLUID)
+			//else if(type[IX(x, y)] == FLUID)
 				//glColor3f(0, 0, 0.7);
 				//glColor3f(p[pos2index[IX(x,y)]]/max_p, 0, 0);
-				//glColor3f(p[IX(x,y)]/max_p, 0, 0);
-				//if(Vy[IX(x, y)] >= 0)
-				//	glColor3f(Vy[IX(x, y)]/max_vy, 0, 0);
-				//else
-				//	glColor3f(0, -Vy[IX(x, y)]/max_vy, 0);
+				
+				//show velosity
+				/*
+				if(Vy[IX(x, y)] >= 0)
+					glColor3f(Vy[IX(x, y)]/max_vy, 0, 0);
+				else
+					glColor3f(0, -Vy[IX(x, y)]/max_vy, 0);
+				*/
+				//show diverence
+				/*
 				if(fabs(div[IX(x, y)]) > 1e-5)
 					glColor3f(1, 0, 0);
 				else
 					glColor3f(0, 0, 0.7);
+				*/
 			else
 				glColor3f(0.5, 0.5, 0.5);
 				//vorticity
@@ -728,15 +724,16 @@ void FluidCube2D::draw_dens()
 		}
 
 	//draw particles
-	/*
-	glColor3f(1, 1, 1);
+
+	glColor3f(0, 0, 0.7);
 	glBegin(GL_POINTS);
 	for(unsigned i = 0; i < particles.size(); i++)
 	{
 		glVertex2f(particles[i].x*GRIDSIZE, particles[i].y*GRIDSIZE);
 	}
 	glEnd();
-	*/
+
+
 	glutSwapBuffers();
 }
 
@@ -832,7 +829,7 @@ void FluidCube2D::updateParticles()
 			std::cout<<"Particle out of bound"<<std::endl;
 			REPORT(x1);
 			REPORT(y1);
-			system("pause");
+			//system("pause");
 		}
 		if(x1 < 1)
 			x1 = 1;
@@ -857,7 +854,7 @@ void FluidCube2D::updateParticles()
 			std::cout<<"Particle out of bound"<<std::endl;
 			REPORT(x1);
 			REPORT(y1);
-			system("pause");
+			//system("pause");
 		}
 
 		x1 = x0 + dt * 0.5 * (vx0 + vx1) * hi;
@@ -1114,7 +1111,7 @@ float FluidCube2D::getVelosity(int index, float x, float y, float *u)
 		std::cout<<"Get velosity out of bound"<<std::endl;
 		REPORT(x);
 		REPORT(y);
-		system("pause");
+		//system("pause");
 	}
 
 	int i0 = int(x), i1 = i0 + 1;
@@ -1163,6 +1160,15 @@ void FluidCube2D::errorRemove()
 		if(fabs(Vy[i]) < eps)
 			Vy[i] = 0;
 	}
+}
+
+void FluidCube2D::fillParticleInGrid(int x, int y)
+{
+	int nump = NUMPERGRID;
+	float step = 1.0 / nump;
+	for(int i = 0; i < nump; i++)
+		for(int j = 0; j < nump; j++)
+			particles.push_back(Pos((x+step*i), (y+step*j)));
 }
 
 #endif

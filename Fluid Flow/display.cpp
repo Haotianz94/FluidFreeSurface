@@ -18,7 +18,6 @@ float dy = sinf(seita);
 float dz = cosf(seita) * sinf(fai);
 #endif
 
-int count = 0;
 int wide, height;
 
 void initialize(){
@@ -27,7 +26,7 @@ void initialize(){
 
 	wide = (_W+2) * GRIDSIZE + 20;
 	height = (_H+2) * GRIDSIZE + 20;
-	cube = new FluidCube2D(VISCOSITY, FRAMERATE, DAMBREAK);
+	cube = new FluidCube2D(VISCOSITY, FRAMERATE, CONTAINER);
 
 	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE |GLUT_RGBA  | GLUT_STENCIL
                       | GLUT_ACCUM);
@@ -100,37 +99,18 @@ void reshape(int _w, int _h){
 
 #ifdef SIMULATION_2D
 
-int lastx,lasty;
-clock_t start;
+int lastx, lasty;
 void mouseClick(int _button, int _state, int _x, int _y){
 	PRINT("mouseClick(" <<_button << "," << _state << "," << _x << "," << _y <<")");
 	if(_state)
 	{
 		PRINT("released");
-		memset(cube->Vx0, 0, sizeof(float) * cube->size);
-		memset(cube->Vy0, 0, sizeof(float) * cube->size);
-
-		//there may be some errors with the position
-		int xx = _x / GRIDSIZE + 1;
-		int yy = (height - _y) / GRIDSIZE ;
-		clock_t time = clock() - start;
-		float dxx = _x - lastx;
-		float dyy = (height -_y) - lasty;
-		float dxy = sqrtf(dxx*dxx + dyy*dyy);
-		if(dxy == 0)
-			return;
-
-		cube->Vx0[IX(xx, yy)] = dxx / dxy * time * DRAGSCALE;
-		cube->Vy0[IX(xx, yy)] = dyy / dxy * time * DRAGSCALE;
-
-		cube->simulate();
 	}
 	else
 	{
 		PRINT("clicked");
 		lastx = _x;
 		lasty = height -_y;
-		start = clock();
 	}
 }
 #else
@@ -249,7 +229,7 @@ void specKeyEvent(int _key, int _x, int _y){
 #endif
 
 void mouseDrag(int _x, int _y){
-	PRINT("mouseDrag(" << _x << "," << _y <<"): displacement from click: (" << _x-lastx << "," << _y-lasty << ")");
+
 }
 
 void mouseMove(int _x, int _y){
@@ -263,30 +243,7 @@ void refresh(){
 
 }
 
-void timer(int value) {
-/*
-#ifdef SIMULATION_2D
-
-	if(count %FLOWTIME == 0)
-	{
-		memset(cube->Vx0, 0, sizeof(float) * cube->size);
-		memset(cube->Vy0, 0, sizeof(float) * cube->size);
-		//for(int x = 1; x <= 5; x++)
-		for(int y = 1; y <= _H; y++)
-		{
-			cube->Vx0[IX(1, y)] = SPEED;  //10000~50000 for 2 vertexes
-			//cube->Vy0[IX(1, y)] = 0;
-		}
-		cube->simulate(false);
-	}
-	else
-	{
-		glutPostRedisplay();
-	}
-	if(count < 2025)
-		count ++;
-#endif
-*/	
+void timer(int value) {	
 
 	glutPostRedisplay();
 	glutTimerFunc(FRAMERATE, timer, 0); // next timer call milliseconds later
