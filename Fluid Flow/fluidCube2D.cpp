@@ -8,7 +8,7 @@
 
 #ifdef SIMULATION_2D
 
-FluidCube2D::FluidCube2D(float viscosity, float fr, SCENETYPE sc)
+FluidCube2D::FluidCube2D(float viscosity, float fr, SCENETYPE sc, RENDERTYPE rt)
 {
 	size = (_W+2) * (_H+2);
 	h = _L / _H;
@@ -17,6 +17,7 @@ FluidCube2D::FluidCube2D(float viscosity, float fr, SCENETYPE sc)
 	visc = viscosity;
 	frameTime = 1.0 / fr;
 	scene = sc;
+	renderType = rt;
 	ctime = 0;
 
 	max_vx = 0;
@@ -26,6 +27,7 @@ FluidCube2D::FluidCube2D(float viscosity, float fr, SCENETYPE sc)
 	Vy = new float [size]; 
 	Vx0 = new float [size]; 
 	Vy0 = new float [size]; 
+	div = new float [size];
 	type = new GRIDTYPE [size];
 
 	//Advection using BFECC
@@ -75,7 +77,8 @@ FluidCube2D::FluidCube2D(float viscosity, float fr, SCENETYPE sc)
 		float R = _W/6;
 		for(int y = 1; y <= _H; y++)
 			for(int x = 1; x <= _W; x++)
-				fillParticleInGrid(x, y);
+				if(DISTANCE(x, y, cx, cy) <= R)
+					fillParticleInGrid(x, y);
 	}
 	//contain bottom
 	else if(scene == CONTAINER)
@@ -139,7 +142,7 @@ FluidCube2D::FluidCube2D(float viscosity, float fr, SCENETYPE sc)
 	memset(Vy, 0, sizeof(float) * size);
 	memset(Vx0, 0, sizeof(float) * size);
 	memset(Vy0, 0, sizeof(float) * size);
-
+	memset(div, 0, sizeof(float) * size);
 	memset(fai_b, 0, sizeof(float) * size);
 	memset(fai_f, 0, sizeof(float) * size);
 }
@@ -150,6 +153,7 @@ FluidCube2D::~FluidCube2D()
 	delete [] Vy;
 	delete [] Vx0;
 	delete [] Vy0;
+	delete [] div;
 	delete [] type;
 
 	delete [] pos2index;
@@ -600,7 +604,7 @@ void FluidCube2D::simulate()
 		vel_step();
 
 		if(draw)
-			draw_dens();
+			render();
 	}
 }
 
@@ -618,7 +622,7 @@ void FluidCube2D::output(float *u)
 #endif
 }
 
-void FluidCube2D::draw_dens()
+void FluidCube2D::render()
 {
 	//identify that we are currently modifying the projection matrix
 	glMatrixMode(GL_PROJECTION);
@@ -656,27 +660,18 @@ void FluidCube2D::draw_dens()
 			max_p = p[i];
 	REPORT(max_p);
 	REPORT(fluidNum);
-	
-	/*
-	float *p = fai_f;
-	for(int y = 1; y <= _H; y++)
-		for(int x = 1; x <= _W; x++)
-			if(p[IX(x, y)] > max_p)
-				max_p = p[IX(x, y)];
-	REPORT(max_p);
-	*/
 
-	/*
 	//calculate divergence
-	float *div = fai_b;
-	for(int y = 1; y <= _H; y++)
-		for(int x = 1; x <= _W; x++)
-		{
-			if(type[IX(x, y)] != FLUID)
-				continue;
-			div[IX(x, y)] = (Vx[IX(x+1,y)]-Vx[IX(x,y)] + Vy[IX(x,y+1)]-Vy[IX(x,y)]);
-		}
-	*/
+	if(renderType == DIVERGENCE)
+	{
+		for(int y = 1; y <= _H; y++)
+			for(int x = 1; x <= _W; x++)
+			{
+				if(type[IX(x, y)] != FLUID)
+					continue;
+				div[IX(x, y)] = (Vx[IX(x+1,y)]-Vx[IX(x,y)] + Vy[IX(x,y+1)]-Vy[IX(x,y)]);
+			}
+	}
 
 	for(int i = 0; i <= _W+1; i++)
 		for(int j = 0; j <= _H+1; j++)
@@ -688,52 +683,65 @@ void FluidCube2D::draw_dens()
 			if(type[IX(x, y)] == SOLID)
 				glColor3f(0, 0.5, 0);
 			
-			//else if(type[IX(x, y)] == FLUID)
-				//glColor3f(0, 0, 0.7);
-				//glColor3f(p[pos2index[IX(x,y)]]/max_p, 0, 0);
-				
-				//show velosity
-				/*
-				if(Vy[IX(x, y)] >= 0)
-					glColor3f(Vy[IX(x, y)]/max_vy, 0, 0);
-				else
-					glColor3f(0, -Vy[IX(x, y)]/max_vy, 0);
-				*/
-				//show diverence
-				/*
-				if(fabs(div[IX(x, y)]) > 1e-5)
-					glColor3f(1, 0, 0);
-				else
+			else if(type[IX(x, y)] == FLUID)
+				switch(renderType)
+				{
+				case FLUIDGRID:
 					glColor3f(0, 0, 0.7);
-				*/
-			else
-				glColor3f(0.5, 0.5, 0.5);
+					break;
+				case PRESSURE:
+					glColor3f(p[pos2index[IX(x,y)]]/max_p, 0, 0);
+					break;
+				case VELOSITYY:
+					if(Vy[IX(x, y)] >= 0)
+						glColor3f(Vy[IX(x, y)]/max_vy, 0, 0);
+					else
+						glColor3f(0, -Vy[IX(x, y)]/max_vy, 0);
+					break;
+				case VELOSITYX:
+					if(Vx[IX(x, y)] >= 0)
+						glColor3f(Vx[IX(x, y)]/max_vx, 0, 0);
+					else
+						glColor3f(0, -Vx[IX(x, y)]/max_vx, 0);
+					break;
+				case DIVERGENCE:
+					if(fabs(div[IX(x, y)]) > 1e-5)
+						glColor3f(1, 0, 0);
+					else
+						glColor3f(0, 0, 0.7);
+					break;
+				case PARTICLE:
+					glColor3f(0.5, 0.5, 0.5);
+					break;
+				default:
+					glColor3f(0, 0, 0.7);
+					break;
 				//vorticity
 				//float w = 0.5 * (Vy[IX(x+1, y)] - Vy[IX(x-1, y)]);
 				//		  - 0.5 * (Vx[IX(x, y+1)] - Vx[IX(x, y-1)]);
-			
+				}
+
 			glBegin(GL_QUADS);
 			glVertex2f(i*GRIDSIZE, j*GRIDSIZE);
 			glVertex2f((i+1)*GRIDSIZE, j*GRIDSIZE);
 			glVertex2f((i+1)*GRIDSIZE, (j+1)*GRIDSIZE);
 			glVertex2f(i*GRIDSIZE, (j+1)*GRIDSIZE);
 			glEnd();
-
 			//if(GRIDSIZE >= 10 && type[IX(x, y)] == FLUID)
 			//	draw_velo(i, j, Vx[IX(x, y)], Vy[IX(x, y)]);
 		}
 
 	//draw particles
-
-	glColor3f(0, 0, 0.7);
-	glBegin(GL_POINTS);
-	for(unsigned i = 0; i < particles.size(); i++)
+	if(renderType == PARTICLE)
 	{
-		glVertex2f(particles[i].x*GRIDSIZE, particles[i].y*GRIDSIZE);
+		glColor3f(0, 0, 0.7);
+		glBegin(GL_POINTS);
+		for(unsigned i = 0; i < particles.size(); i++)
+		{
+			glVertex2f(particles[i].x*GRIDSIZE, particles[i].y*GRIDSIZE);
+		}
+		glEnd();
 	}
-	glEnd();
-
-
 	glutSwapBuffers();
 }
 
@@ -1113,6 +1121,15 @@ float FluidCube2D::getVelosity(int index, float x, float y, float *u)
 		REPORT(y);
 		//system("pause");
 	}
+	if(x < 0)
+		x = 0;
+	if(x >= _W+1)
+		x = _W+0.999;
+	if(y < 0)
+		y = 0;
+	if(y >= _H+1)
+		y = _H+0.999;
+
 
 	int i0 = int(x), i1 = i0 + 1;
 	int j0 = int(y), j1 = j0 + 1;

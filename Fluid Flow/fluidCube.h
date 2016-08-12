@@ -31,6 +31,16 @@ enum SCENETYPE
 	DAMBREAK
 };
 
+enum RENDERTYPE
+{
+	VELOSITYX,
+	VELOSITYY,
+	PRESSURE,
+	DIVERGENCE,
+	PARTICLE,
+	FLUIDGRID
+};
+
 class FluidCube2D
 {
 private:
@@ -42,6 +52,7 @@ private:
 
 	float *Vx;
 	float *Vy;
+	float *div;
 	GRIDTYPE *type;
 	std::vector<Pos> obstacle;
 	float max_vx;
@@ -68,6 +79,7 @@ private:
 	std::vector<int> **invertedList;
 	
 	SCENETYPE scene;
+	RENDERTYPE renderType;
 	float ctime;
 	float frameTime;
 
@@ -99,13 +111,13 @@ private:
 	void swap(float *x0, float *x);
 	void set_bnd();
 
-	void draw_dens();
+	void render();
 	void draw_velo(int i, int j, float vx, float vy);
 
 	void output(float *u);
 
 public:
-	FluidCube2D(float viscosity, float fr, SCENETYPE sc = CONTAINER);
+	FluidCube2D(float viscosity, float fr, SCENETYPE sc = CONTAINER, RENDERTYPE rt = PARTICLE);
 	~FluidCube2D();
 	void simulate();
 	void setScene(SCENETYPE sc) { scene = sc; }

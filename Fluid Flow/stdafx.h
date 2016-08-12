@@ -20,6 +20,8 @@
 	#define FRAMERATE 32
 	#define NUMPERGRID 6
 	#define GRAVITY 9.8
+	#define MYSCENE CONTAINER
+	#define MYRENDER PARTICLE
 
 	#define IX(x, y) ( (x) + (y) * (_W+2) )
 	#define BOUNDED(x, y) ( (type[IX(int(x),int(y))] == SOLID || type[IX(int(x)+1,int(y)+1)] == SOLID)? false : true)
