@@ -1,15 +1,15 @@
-//implement your drawing functions here
 #include "stdafx.h"
-#include "fluidCube.h"
 #include "display.h"
 #include <math.h>
 #include <ctime>
 #include <cstdio>
 
 #ifdef SIMULATION_2D
-FluidCube2D *cube;
+#include "fluidCube2D.h"
+	FluidCube2D *cube;
 #else
-FluidCube3D *cube;
+#include "fluidCube3D.h"
+	FluidCube3D *cube;
 float ll = 2 * LENGTH;
 float seita = 0, fai = 0;
 float px = 2 * LENGTH, py = 0, pz = 0;
@@ -30,7 +30,7 @@ void initialize(){
 
 	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE |GLUT_RGBA  | GLUT_STENCIL
                       | GLUT_ACCUM);
-	glutInitWindowPosition(100, 100); //initial position of the window on the screen
+	glutInitWindowPosition(10, 10); //initial position of the window on the screen
 	glutInitWindowSize(wide, height);
 	glutCreateWindow("2D Fluid Simulation"); //create a window and set its focus
 
