@@ -1,6 +1,6 @@
+#include "stdafx.h"
 #ifdef SIMULATION_2D
 
-#include "stdafx.h"
 #include "fluidCube2D.h"
 #include <memory.h>
 #include <math.h>
