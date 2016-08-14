@@ -73,7 +73,7 @@ FluidCube3D::FluidCube3D(float viscosity, float fr, SCENETYPE sc, RENDERTYPE rt)
 	//cube fall
 	if(scene == CUBEFALL)
 	{
-		for(int z = _Z*3.0; z <= _Z*3.0/2; z++)
+		for(int z = _Z/3.0; z <= _Z/3.0*2; z++)
 			for(int y = _Y/4.0; y <= _Y/2.0; y++)
 				for(int x = _X/3.0; x <= _X/3.0*2; x++)
 					fillParticleInGrid(x, y, z);
@@ -861,8 +861,8 @@ void FluidCube3D::set_bnd()
 
 void FluidCube3D::simulate()
 {	
-	while(true)
-	{
+	//while(true)
+	//{
 		bool draw = calculateTimeStep();
 	
 		updateParticles();
@@ -875,7 +875,7 @@ void FluidCube3D::simulate()
 
 		if(draw)
 			render();
-	}
+	//}
 }
 
 void FluidCube3D::output(float *u)
@@ -901,7 +901,7 @@ void FluidCube3D::render()
 	glScalef(0.002f, 0.002f, 0.002f);
 
 	// Set the camera
-	gluLookAt(	200, 200, 200,
+	gluLookAt(	px, py, pz,
 				0, 0, 0,
 				0.0f, 1.0f, 0.0f);
 
@@ -940,20 +940,6 @@ void FluidCube3D::render()
 	}
 
 	glTranslatef(-LENGTH/2, -LENGTH/2, -LENGTH/2);
-	
-	glColor3f(0.7, 0, 0);
-	glBegin(GL_QUADS);
-	glVertex3f(0, 0, 0);
-	glVertex3f(0, 80, 0);
-	glVertex3f(100, 80, 0);
-	glVertex3f(100, 0, 0);
-
-	glColor3f(0, 0.7, 0);
-	glVertex3f(0, 0, 0);
-	glVertex3f(0, 0, 100);
-	glVertex3f(0, 100, 100);
-	glVertex3f(0, 100, 0);
-	glEnd();
 
 	for(int k = 0; k < _Z; k++)	
 		for(int j = 0; j < _Y; j++)
@@ -965,6 +951,8 @@ void FluidCube3D::render()
 				float color;
 				if(type[IX(x, y, z)] == SOLID)
 					glColor3f(0, 0.7, 0);
+				else if(renderType == PARTICLE)
+					continue;
 				else if(type[IX(x, y, z)] == FLUID)
 				{
 					switch(renderType)
@@ -992,9 +980,6 @@ void FluidCube3D::render()
 							glColor3f(1, 0, 0);
 						else
 							glColor3f(0, 0, 0.7);
-						break;
-					case PARTICLE:
-						continue;
 						break;
 					default:
 						glColor3f(0, 0, 0.7);
@@ -1109,8 +1094,8 @@ bool FluidCube3D::calculateTimeStep()
 		dt = frameTime;
 	else
 		dt = h / max_v;
-	//if(dt > frameTime)
-	dt = frameTime;
+	if(dt > frameTime)
+		dt = frameTime;
 	return true;
 
 	if(ctime + dt >= frameTime)

@@ -10,9 +10,9 @@
 #else
 #include "fluidCube3D.h"
 	FluidCube3D *cube;
-float ll = 2 * LENGTH;
+float ll = 200;
 float seita = 0, fai = 0;
-float px = 2 * LENGTH, py = 0, pz = 0;
+float px = ll, py = 0, pz = 0;
 float dx = cosf(seita) * cosf(fai);
 float dy = sinf(seita);
 float dz = cosf(seita) * sinf(fai);
@@ -52,7 +52,7 @@ void initialize(){
 	glutCreateWindow("3D Fluid Simulation"); //create a window and set its focus
 
 	glutDisplayFunc(refresh); //infinite loop to draw on the window
-	//glutTimerFunc(0, timer, 0);
+	glutTimerFunc(0, timer, 0);
 	//glutReshapeFunc(reshape); //called when the window is resized
 	glutKeyboardFunc(keyEvent); //called when a standard key is pressed
 	glutSpecialFunc(specKeyEvent); //called when a special key is pressed (ie. enter);
@@ -245,5 +245,5 @@ void refresh(){
 void timer(int value) {	
 
 	glutPostRedisplay();
-	glutTimerFunc(FRAMERATE, timer, 0); // next timer call milliseconds later
+	glutTimerFunc(1000/FRAMERATE, timer, 0); // next timer call milliseconds later
 }

@@ -37,7 +37,7 @@
 	#define FRAMERATE 32
 	#define NUMPERGRID 6
 	#define GRAVITY 9.8
-	#define MYSCENE DAMBREAK
+	#define MYSCENE CUBEFALL
 	#define MYRENDER PARTICLE
 
 	#define IX(x, y, z) ((x) + (y)*(_X+2) + (z)*(_X+2)*(_Y+2) )
