@@ -27,11 +27,11 @@
 	#define DISTANCE(x1, y1, x2, y2) ( sqrtf((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2)) )
 
 #else
-	#define _X 40
-	#define _Y 40
-	#define _Z 40
+	#define _X 20
+	#define _Y 20
+	#define _Z 20
 	#define _L 1.0
-	#define GRIDSIZE 15
+	#define GRIDSIZE 40
 	#define VISCOSITY 0.00001
 	#define ITERATION 30
 	#define FRAMERATE 32

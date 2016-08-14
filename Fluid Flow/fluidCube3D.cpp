@@ -107,7 +107,7 @@ FluidCube3D::FluidCube3D(float viscosity, float fr, SCENETYPE sc, RENDERTYPE rt)
 	//dam break
 	else if(scene == DAMBREAK)
 	{
-		for(int z = 1; z <= _Z/4.0; z++)
+		for(int z = 1; z <= _Z/4.0*3; z++)
 			for(int y = 1; y <= _Y/3.0*2; y++)
 				for(int x = 1; x <= _X/4.0; x++)
 					fillParticleInGrid(x, y, z);
@@ -411,32 +411,32 @@ void FluidCube3D::projectVelosity()
 					continue;
 
 				double p1, p2;
-				p2 = p[IX(x, y, z)];
+				p2 = p[pos2index[IX(x, y, z)]];
 				//Vx
 				if(type[IX(x-1, y, z)] == AIR)
 					p1 = 0;
 				else if(type[IX(x-1, y, z)] == FLUID)
-					p1 = p[IX(x-1, y, z)];
+					p1 = p[pos2index[IX(x-1, y, z)]];
 				else
-					p1 = p[IX(x, y, z)];
+					p1 = p[pos2index[IX(x, y, z)]];
 				Vx[IX(x, y, z)] -= (p2 - p1) * hi;
 			
 				//Vy
 				if(type[IX(x, y-1, z)] == AIR)
 					p1 = 0;
 				else if(type[IX(x, y-1, z)] == FLUID)
-					p1 = p[IX(x, y-1, z)];
+					p1 = p[pos2index[IX(x, y-1, z)]];
 				else
-					p1 = p[IX(x, y, z)];
+					p1 = p[pos2index[IX(x, y, z)]];
 				Vy[IX(x, y, z)] -= (p2 - p1) * hi;
 
 				//Vz
 				if(type[IX(x, y, z-1)] == AIR)
 					p1 = 0;
 				else if(type[IX(x, y, z-1)] == FLUID)
-					p1 = p[IX(x, y, z-1)];
+					p1 = p[pos2index[IX(x, y, z-1)]];
 				else
-					p1 = p[IX(x, y, z)];
+					p1 = p[pos2index[IX(x, y, z)]];
 				Vz[IX(x, y, z)] -= (p2 - p1) * hi;
 
 				if(fabsf(Vx[IX(x, y, z)]) > max_vx)
@@ -898,10 +898,10 @@ void FluidCube3D::render()
 	glMatrixMode(GL_MODELVIEW);
 	// Reset transformations
 	glLoadIdentity();
-	glScalef(0.02f, 0.02f, 0.02f);
+	glScalef(0.002f, 0.002f, 0.002f);
 
 	// Set the camera
-	gluLookAt(	px, py, pz,
+	gluLookAt(	200, 200, 200,
 				0, 0, 0,
 				0.0f, 1.0f, 0.0f);
 
@@ -916,6 +916,7 @@ void FluidCube3D::render()
 
 	REPORT(max_vx);
 	REPORT(max_vy);
+	REPORT(max_vz);
 
 	float max_p = -9999;
 	for(int i = 0; i < fluidNum; i++)
@@ -939,6 +940,21 @@ void FluidCube3D::render()
 	}
 
 	glTranslatef(-LENGTH/2, -LENGTH/2, -LENGTH/2);
+	
+	glColor3f(0.7, 0, 0);
+	glBegin(GL_QUADS);
+	glVertex3f(0, 0, 0);
+	glVertex3f(0, 80, 0);
+	glVertex3f(100, 80, 0);
+	glVertex3f(100, 0, 0);
+
+	glColor3f(0, 0.7, 0);
+	glVertex3f(0, 0, 0);
+	glVertex3f(0, 0, 100);
+	glVertex3f(0, 100, 100);
+	glVertex3f(0, 100, 0);
+	glEnd();
+
 	for(int k = 0; k < _Z; k++)	
 		for(int j = 0; j < _Y; j++)
 			for(int i = 0; i < _X; i++)
@@ -1035,10 +1051,43 @@ void FluidCube3D::render()
 		glBegin(GL_POINTS);
 		for(unsigned i = 0; i < particles.size(); i++)
 		{
-			glVertex3f(particles[i].x*GRIDSIZE, particles[i].y*GRIDSIZE, particles[i].z*GRIDSIZE);
+			glVertex3f((particles[i].x-1)*GRIDSIZE, (particles[i].y-1)*GRIDSIZE, (particles[i].z-1)*GRIDSIZE);
 		}
 		glEnd();
 	}
+
+	
+	//draw box
+	glColor3f(1, 1, 1);
+	glBegin(GL_LINES);
+	glVertex3f(0, 0, 0);
+	glVertex3f(0, LENGTH, 0);
+	glVertex3f(0, LENGTH, 0);
+	glVertex3f(LENGTH, LENGTH, 0);
+	glVertex3f(LENGTH, LENGTH, 0);
+	glVertex3f(LENGTH, 0, 0);
+	glVertex3f(LENGTH, 0, 0);
+	glVertex3f(0, 0, 0);
+
+	glVertex3f(0, 0, LENGTH);
+	glVertex3f(0, LENGTH, LENGTH);
+	glVertex3f(0, LENGTH, LENGTH);
+	glVertex3f(LENGTH, LENGTH, LENGTH);
+	glVertex3f(LENGTH, LENGTH, LENGTH);
+	glVertex3f(LENGTH, 0, LENGTH);
+	glVertex3f(LENGTH, 0, LENGTH);
+	glVertex3f(0, 0, LENGTH);
+
+	glVertex3f(0, 0, 0);
+	glVertex3f(0, 0, LENGTH);
+	glVertex3f(0, LENGTH, LENGTH);
+	glVertex3f(0, LENGTH, 0);
+	glVertex3f(LENGTH, LENGTH, LENGTH);
+	glVertex3f(LENGTH, LENGTH, 0);
+	glVertex3f(LENGTH, 0, LENGTH);
+	glVertex3f(LENGTH, 0, 0);
+	glEnd();
+
 	glutSwapBuffers();
 }
 
