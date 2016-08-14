@@ -172,13 +172,6 @@ FluidCube2D::~FluidCube2D()
 
 void FluidCube2D::vel_step()
 {
-	/*
-	SWAP(Vx0, Vx);
-	SWAP(Vy0, Vy);
-	diffuseVelosity();
-	set_bnd();
-	*/
-
 	SWAP(Vx0, Vx);
 	SWAP(Vy0, Vy);
 	advectVelosity();
@@ -186,7 +179,12 @@ void FluidCube2D::vel_step()
 
 	addForce();
 	set_bnd();
-
+	/*
+	SWAP(Vx0, Vx);
+	SWAP(Vy0, Vy);
+	diffuseVelosity();
+	set_bnd();
+	*/
 	projectVelosity();
 	set_bnd();
 
@@ -684,6 +682,7 @@ void FluidCube2D::render()
 				glColor3f(0, 0.5, 0);
 			
 			else if(type[IX(x, y)] == FLUID)
+			{
 				switch(renderType)
 				{
 				case FLUIDGRID:
@@ -711,7 +710,7 @@ void FluidCube2D::render()
 						glColor3f(0, 0, 0.7);
 					break;
 				case PARTICLE:
-					glColor3f(0.5, 0.5, 0.5);
+					continue;
 					break;
 				default:
 					glColor3f(0, 0, 0.7);
@@ -720,6 +719,9 @@ void FluidCube2D::render()
 				//float w = 0.5 * (Vy[IX(x+1, y)] - Vy[IX(x-1, y)]);
 				//		  - 0.5 * (Vx[IX(x, y+1)] - Vx[IX(x, y-1)]);
 				}
+			}
+			else
+				continue;
 
 			glBegin(GL_QUADS);
 			glVertex2f(i*GRIDSIZE, j*GRIDSIZE);
@@ -801,22 +803,23 @@ bool FluidCube2D::calculateTimeStep()
 	else
 		dt = h / max_v;
 	//if(dt > frameTime)
-	//	dt = frameTime;
 	
+	//dt = frameTime;
 	//return true;
 
 	if(ctime + dt >= frameTime)
 	{
 		dt = frameTime - ctime;
 		ctime = 0;
+		REPORT(dt);
 		return true;
 	}
 	else
 	{
 		ctime += dt;
+		REPORT(dt);
 		return false;
 	}
-	REPORT(dt);
 	//if(dt > h2 /(6*visc))
 }
 
@@ -856,6 +859,9 @@ void FluidCube2D::updateParticles()
 
 		float vx1 = getVelosity(1, x1, y1, Vx);
 		float vy1 = getVelosity(2, x1, y1, Vy);
+
+		x1 = x0 + dt * 0.5 * (vx0 + vx1) * hi;
+		y1 = y0 + dt * 0.5 * (vy0 + vy1) * hi;
 		//if particle out of boundary???
 		if(x1 < 1 || x1 >= _W+1 || y1 < 1 || y1 >= _H+1)
 		{
@@ -864,9 +870,6 @@ void FluidCube2D::updateParticles()
 			REPORT(y1);
 			//system("pause");
 		}
-
-		x1 = x0 + dt * 0.5 * (vx0 + vx1) * hi;
-		y1 = y0 + dt * 0.5 * (vy0 + vy1) * hi;
 		if(x1 < 1)
 			x1 = 1;
 		if(x1 >= _W+1)

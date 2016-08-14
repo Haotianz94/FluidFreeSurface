@@ -6,6 +6,10 @@
 #include <math.h>
 #include <Eigen\Eigen>
 
+extern float px;
+extern float py;
+extern float pz;
+
 FluidCube3D::FluidCube3D(float viscosity, float fr, SCENETYPE sc, RENDERTYPE rt)
 {
 	size = (_X+2) * (_Y+2) * (_Z+2);
@@ -36,12 +40,12 @@ FluidCube3D::FluidCube3D(float viscosity, float fr, SCENETYPE sc, RENDERTYPE rt)
 	fai_f = new float [size];
 
 	//Projection using Conjugate Gradient
-	dir[0] = Eigen::Vector2i(0, -1);
-	dir[1] = Eigen::Vector2i(-1, 0);
-	dir[2] = Eigen::Vector2i(1, 0);
-	dir[3] = Eigen::Vector2i(0, 1);
-	dir[4] = Eigen::Vector2i(1, 0);
-	dir[5] = Eigen::Vector2i(0, 1);
+	dir[0] = Eigen::Vector3i(0, 0, -1);
+	dir[1] = Eigen::Vector3i(0, -1, 0);
+	dir[2] = Eigen::Vector3i(-1, 0, 0);
+	dir[3] = Eigen::Vector3i(1, 0, 0);
+	dir[4] = Eigen::Vector3i(0, 1, 0);
+	dir[5] = Eigen::Vector3i(0, 0, 1);
 	pos2index = new int [size]; 
 	neighNoneSolid = new int [size];
 	neighAir = new int [size];
@@ -103,25 +107,25 @@ FluidCube3D::FluidCube3D(float viscosity, float fr, SCENETYPE sc, RENDERTYPE rt)
 	//dam break
 	else if(scene == DAMBREAK)
 	{
-		for(int z = 1; z <= _Z*4.0; z++)
+		for(int z = 1; z <= _Z/4.0; z++)
 			for(int y = 1; y <= _Y/3.0*2; y++)
 				for(int x = 1; x <= _X/4.0; x++)
 					fillParticleInGrid(x, y, z);
 	}
 
 #ifdef OBSTACLE
-	int cx = _W / 2.0;
-	int cy = _H / 3.0;
-	int R = _H * 0.1;
+	int cx = _X / 2.0;
+	int cy = _Y / 3.0;
+	int R = _Y * 0.1;
 	fluidNum = 0;
-	for(int y = 1; y <= _H; y++)
-		for(int x = 1; x <= _W; x++)
+	for(int y = 1; y <= _Y; y++)
+		for(int x = 1; x <= _X; x++)
 		{
 			if(DISTANCE(x,y,cx,cy) <= R)
 				type[IX(x, y)] = SOLID;
 		}
-	/*for(int y = 1; y <= _H; y++)
-		for(int x = 1; x <= _W; x++)
+	/*for(int y = 1; y <= _Y; y++)
+		for(int x = 1; x <= _X; x++)
 			if(type[IX(x, y)] == SOLID)
 			{
 				for(int i = 0; i < 4; i++)
@@ -258,121 +262,131 @@ void FluidCube3D::projectVelosity()
 #ifdef GAUSS_SEIDEL
 	//Gauss_Seidel
 	float *p = fai_f;
-	//float *div = Vy0;
 
-	for(int y = 1; y <= _H; y++)
-		for(int x = 1; x <= _W; x++)
-		{
-			if(type[IX(x, y)] != FLUID)
-				continue;
+	for(int z = 1; z <= _Z; z++)
+		for(int y = 1; y <= _Y; y++)
+			for(int x = 1; x <= _X; x++)
+			{
+				if(type[IX(x, y, z)] != FLUID)
+					continue;
 
-			div[IX(x, y)] = -h * (Vx[IX(x+1,y)]-Vx[IX(x,y)] + Vy[IX(x,y+1)]-Vy[IX(x,y)]);
-			p[IX(x, y)] = 0;
-		}
-	//set_bnd(0, div);
-	//set_bnd(0, p);
+				div[IX(x, y, z)] = -h * (Vx[IX(x+1,y,z)]-Vx[IX(x,y,z)] + Vy[IX(x,y+1,z)]-Vy[IX(x,y,z)]
+										+ Vz[IX(x,y,z+1)]-Vz[IX(x,y,z)]);
+				p[IX(x, y, z)] = 0;
+			}
 	
 	for(int k = 0; k < ITERATION; k++)
 	{
-		for(int y = 1; y <= _H; y++)
-			for(int x = 1; x <= _W; x++)
-				if(type[IX(x, y)] == FLUID)
-					p[IX(x, y)] = (div[IX(x,y)] + p[IX(x,y)] + p[IX(x+1,y)] + p[IX(x,y)] + p[IX(x,y+1)]) / 4;
+		for(int z = 1; z <= _Y; z++)
+			for(int y = 1; y <= _Y; y++)
+				for(int x = 1; x <= _X; x++)
+					if(type[IX(x, y, z)] == FLUID)
+						p[IX(x, y, z)] = (div[IX(x,y,z)] + p[IX(x-1,y,z)] + p[IX(x+1,y,z)] + p[IX(x,y-1,z)] + p[IX(x,y+1,z)]
+										  + p[IX(x,y,z-1)] + p[IX(x,y,z+1)]) / 6;
 	}
- 
-	for(int y = 1; y <= _H; y++)
-		for(int x = 1; x <= _W; x++)
-		{
-			if(type[IX(x, y)] != FLUID)
-				continue;
 
-			double p1, p2;
-			p2 = p[IX(x,y)];
-			//Vx
-			if(type[IX(x-1, y)] == AIR)
-				p1 = 0;
-			else if(type[IX(x-1, y)] == FLUID)
-				p1 = p[IX(x-1,y)];
-			else
-				p1 = p[IX(x,y)];
-			Vx[IX(x, y)] -= (p2 - p1) * hi;
-			
-			//Vy
-			if(type[IX(x, y-1)] == AIR)
-				p1 = 0;
-			else if(type[IX(x, y-1)] == SOLID)
-				p1 = p[IX(x,y)];
-			else
+	for(int z = 1; z <= _Z; z++)
+		for(int y = 1; y <= _Y; y++)
+			for(int x = 1; x <= _X; x++)
 			{
-				if(type[IX(x, y-1)] != FLUID)
-					*(int*)0 = 0;
-				p1 = p[IX(x,y-1)];
-			}
-			Vy[IX(x, y)] -= (p2 - p1) * hi;
+				if(type[IX(x, y, z)] != FLUID)
+					continue;
 
-			if(fabsf(Vx[IX(x, y)]) > max_vx)
-				max_vx = fabsf(Vx[IX(x, y)]);
-			if(fabsf(Vy[IX(x, y)]) > max_vy)
-				max_vy = fabsf(Vy[IX(x, y)]);
-		}
-	//set_bnd(1, Vx);
-	//set_bnd(2, Vy);
+				double p1, p2;
+				p2 = p[IX(x, y, z)];
+				//Vx
+				if(type[IX(x-1, y, z)] == AIR)
+					p1 = 0;
+				else if(type[IX(x-1, y, z)] == FLUID)
+					p1 = p[IX(x-1, y, z)];
+				else
+					p1 = p[IX(x, y, z)];
+				Vx[IX(x, y, z)] -= (p2 - p1) * hi;
+			
+				//Vy
+				if(type[IX(x, y-1, z)] == AIR)
+					p1 = 0;
+				else if(type[IX(x, y-1, z)] == FLUID)
+					p1 = p[IX(x, y-1, z)];
+				else
+					p1 = p[IX(x, y, z)];
+				Vy[IX(x, y, z)] -= (p2 - p1) * hi;
+
+				//Vz
+				if(type[IX(x, y, z-1)] == AIR)
+					p1 = 0;
+				else if(type[IX(x, y, z-1)] == FLUID)
+					p1 = p[IX(x, y, z-1)];
+				else
+					p1 = p[IX(x, y, z)];
+				Vz[IX(x, y, z)] -= (p2 - p1) * hi;
+
+				if(fabsf(Vx[IX(x, y, z)]) > max_vx)
+					max_vx = fabsf(Vx[IX(x, y, z)]);
+				if(fabsf(Vy[IX(x, y, z)]) > max_vy)
+					max_vy = fabsf(Vy[IX(x, y, z)]);
+				if(fabsf(Vz[IX(x, y, z)]) > max_vz)
+					max_vz = fabsf(Vz[IX(x, y, z)]);
+			}
 #else
 	//Conjugate Gradient
 	/*
 	//check div before project
-	for(int y = 1; y <= _H; y++)
-		for(int x = 1; x <= _W; x++)
-		{
-			if(type[IX(x, y)] != FLUID)
-				continue;
-			div[IX(x, y)] = (Vx[IX(x+1,y)]-Vx[IX(x,y)] + Vy[IX(x,y+1)]-Vy[IX(x,y)]);
-		}
+	for(int z = 1; z <= _Z; z++)
+		for(int y = 1; y <= _Y; y++)
+			for(int x = 1; x <= _X; x++)
+			{
+				if(type[IX(x, y, z)] != FLUID)
+					continue;
+				div[IX(x, y, z)] = (Vx[IX(x+1,y,z)]-Vx[IX(x,y,z)] + Vy[IX(x,y+1,z)]-Vy[IX(x,y,z)]
+									+ Vz[IX(x,y,z+1)]-Vz[IX(x,y,z)]);
+			}
 	output(div);
 	*/
 	Eigen::VectorXd b(fluidNum);
 	int index = 0;
-	for(int y = 1; y <= _H; y++)
-		for(int x = 1; x <= _W; x++)
-		{
-			if(type[IX(x, y)] != FLUID)
-				continue;
+	for(int z = 1; z <= _Z; z++)
+		for(int y = 1; y <= _Y; y++)
+			for(int x = 1; x <= _X; x++)
+			{
+				if(type[IX(x, y, z)] != FLUID)
+					continue;
 
-			b[index++] =  -h * (Vx[IX(x+1,y)]-Vx[IX(x,y)] + Vy[IX(x,y+1)]-Vy[IX(x,y)]);
-		}
+				b[index++] =  -h * (Vx[IX(x+1,y,z)]-Vx[IX(x,y,z)] + Vy[IX(x,y+1,z)]-Vy[IX(x,y,z)]
+											+ Vz[IX(x,y,z+1)]-Vz[IX(x,y,z)]);
+			}
 	
 	//std::cout<<b<<std::endl;
-
 	p.resize(fluidNum);
 	p = solver.solve(b);
-	
+
 	//for(int i = 100; i < 110; i++)
 	//	cout<<p[i]<<' ';
 	//cout<<endl;
 	/*
 	std::cout<<"bbbbbbb"<<std::endl;
-	for(int y = 1; y <= _H; y++)
-		for(int x = 1; x <= _W; x++)
+	for(int y = 1; y <= _Y; y++)
+		for(int x = 1; x <= _X; x++)
 		{
 			if(type[IX(x, y)] != FLUID)
 				continue;
 
 			std::cout<<b[pos2index[IX(x,y)]]<<std::endl;
-			if(x == _W)
+			if(x == _X)
 				std::cout<<std::endl;
 		}
 	
 	std::cout<<"ppppppp"<<std::endl;
-	for(int y = 1; y <= _H; y++)
+	for(int y = 1; y <= _Y; y++)
 	{
 		float lastp = -1;
-		for(int x = 1; x <= _W; x++)
+		for(int x = 1; x <= _X; x++)
 		{
 			if(type[IX(x, y)] != FLUID)
 				continue;
 
 			//std::cout<<p[pos2index[IX(x,10)]]<<std::endl;
-			//if(x == _W)
+			//if(x == _X)
 				//std::cout<<std::endl;
 			float curp = p[pos2index[IX(x,y)]];
 			if(x == 1)
@@ -389,38 +403,49 @@ void FluidCube3D::projectVelosity()
 	}
 	*/
 
-	for(int y = 1; y <= _H; y++)
-		for(int x = 1; x <= _W; x++)
-		{
-			if(type[IX(x, y)] != FLUID)
-				continue;
+	for(int z = 1; z <= _Z; z++)
+		for(int y = 1; y <= _Y; y++)
+			for(int x = 1; x <= _X; x++)
+			{
+				if(type[IX(x, y, z)] != FLUID)
+					continue;
 
-			double p1, p2;
-			p2 = p[pos2index[IX(x,y)]];
-			//Vx
-			if(type[IX(x-1, y)] == AIR)
-				p1 = 0;
-			else if(type[IX(x-1, y)] == FLUID)
-				p1 = p[pos2index[IX(x-1,y)]];
-			else
-				p1 = p[pos2index[IX(x,y)]];
-			Vx[IX(x, y)] -= (p2 - p1) * hi;
+				double p1, p2;
+				p2 = p[IX(x, y, z)];
+				//Vx
+				if(type[IX(x-1, y, z)] == AIR)
+					p1 = 0;
+				else if(type[IX(x-1, y, z)] == FLUID)
+					p1 = p[IX(x-1, y, z)];
+				else
+					p1 = p[IX(x, y, z)];
+				Vx[IX(x, y, z)] -= (p2 - p1) * hi;
 			
-			//Vy
-			if(type[IX(x, y-1)] == AIR)
-				p1 = 0;
-			else if(type[IX(x, y-1)] == SOLID)
-				p1 = p[pos2index[IX(x,y)]];
-			else
-				p1 = p[pos2index[IX(x,y-1)]];
-			Vy[IX(x, y)] -= (p2 - p1) * hi;
-		
+				//Vy
+				if(type[IX(x, y-1, z)] == AIR)
+					p1 = 0;
+				else if(type[IX(x, y-1, z)] == FLUID)
+					p1 = p[IX(x, y-1, z)];
+				else
+					p1 = p[IX(x, y, z)];
+				Vy[IX(x, y, z)] -= (p2 - p1) * hi;
 
-			if(fabsf(Vx[IX(x, y)]) > max_vx)
-				max_vx = fabsf(Vx[IX(x, y)]);
-			if(fabsf(Vy[IX(x, y)]) > max_vy)
-				max_vy = fabsf(Vy[IX(x, y)]);
-		}
+				//Vz
+				if(type[IX(x, y, z-1)] == AIR)
+					p1 = 0;
+				else if(type[IX(x, y, z-1)] == FLUID)
+					p1 = p[IX(x, y, z-1)];
+				else
+					p1 = p[IX(x, y, z)];
+				Vz[IX(x, y, z)] -= (p2 - p1) * hi;
+
+				if(fabsf(Vx[IX(x, y, z)]) > max_vx)
+					max_vx = fabsf(Vx[IX(x, y, z)]);
+				if(fabsf(Vy[IX(x, y, z)]) > max_vy)
+					max_vy = fabsf(Vy[IX(x, y, z)]);
+				if(fabsf(Vz[IX(x, y, z)]) > max_vz)
+					max_vz = fabsf(Vz[IX(x, y, z)]);
+			}
 	
 #endif
 
@@ -435,178 +460,403 @@ void FluidCube3D::diffuse(int b, float *u0, float *u, float diffusion)
 	/*
 	for(int k = 0; k < ITERATION; k++)
 	{
-		for(int y = 1; y <= _H; y++)
-			for(int x = 1; x <= _W; x++)
-				if(type[IX(x, y)] == FLUID)
-				{	
-					int fnum = 0;
-					float v = 0;
-					for(int i = 0; i < 4; i++)
-					{
-						int xx = x + dir[i].x;
-						int yy = y + dir[i].y;
-						if(type[IX(xx, yy)] == FLUID)
+		for(int z = 1; z <= _Z; z++)
+			for(int y = 1; y <= _Y; y++)
+				for(int x = 1; x <= _X; x++)
+					if(type[IX(x, y, z)] == FLUID)
+					{	
+						int fnum = 0;
+						float v = 0;
+						for(int i = 0; i < 6; i++)
 						{
-							v += u[IX(xx, yy)];
-							fnum ++;
+							int xx = x + dir[i][0];
+							int yy = y + dir[i][1];
+							int zz = z + dir[i][2];
+							if(type[IX(xx, yy, zz)] == FLUID)
+							{
+								v += u[IX(xx, yy, zz)];
+								fnum ++;
+							}
 						}
+						u[IX(x, y, z)] = (u0[IX(x, y, z)] + a * v) / (1+fnum*a);
 					}
-					u[IX(x, y)] = (u0[IX(x, y)] + a * v) / (1+fnum*a);
-				}
 	}
 	*/
 
 	//can also try unstable way
-	for(int y = 1; y <= _H; y++)
-		for(int x = 1; x <= _W; x++)
-			if(type[IX(x, y)] == FLUID)
-			{
-				u[IX(x, y)] = u0[IX(x, y)];
-				for(int i = 0; i < 4; i++)
+	for(int z = 1; z <= _Z; z++)
+		for(int y = 1; y <= _Y; y++)
+			for(int x = 1; x <= _X; x++)
+				if(type[IX(x, y, z)] == FLUID)
 				{
-					int xx = x + dir[i][0];
-					int yy = y + dir[i][1];
-					if(type[IX(xx, yy)] == FLUID)
+					u[IX(x, y, z)] = u0[IX(x, y, z)];
+					for(int i = 0; i < 6; i++)
 					{
-						u[IX(x, y)] += a * (u0[IX(xx, yy)] - u0[IX(x, y)]);
-					}	
+						int xx = x + dir[i][0];
+						int yy = y + dir[i][1];
+						int zz = z + dir[i][2];
+						if(type[IX(xx, yy, zz)] == FLUID)
+						{
+							u[IX(x, y, z)] += a * (u0[IX(xx, yy, zz)] - u0[IX(x, y, z)]);
+						}	
+					}
 				}
-			}
-					
 }
 
 void FluidCube3D::advect(int b, float *u0, float *u,  bool backward)
 {
-	for(int y = 1; y <= _H; y++)
-		for(int x = 1; x <= _W; x++)
-		{
-			if(type[IX(x, y)] != FLUID)
-				continue;
-		
-			Pos pos = traceParticle(b, x, y, backward);
-		
-			u[IX(x, y)] = getVelosity(b, pos.x, pos.y, u0);
-
-			/*if(x0 < 0.5)
-				x0 = 0.5;
-			else if(x0 > _W + 0.5)
-				x0 = _W + 0.5;
-
-			if(y0 < 0.5)
-				y0 = 0.5;
-			else if(y0 > _H + 0.5)
-				y0 = _H + 0.5;
-
-			int i0 = int(x0), i1 = i0 + 1;
-			int j0 = int(y0), j1 = j0 + 1;
-			float s1 = x0 - i0, s0 = 1 - s1;
-			float t1 = y0 - j0, t0 = 1 - t1;
-
-			//if trace into solid, up it unchanged
-			int nonFluidNum = 0;
-			if(type[IX(i0, j0)] != FLUID)
-				nonFluidNum ++;
-			if(type[IX(i0, j1)] != FLUID)
-				nonFluidNum ++;
-			if(type[IX(i1, j0)] != FLUID)
-				nonFluidNum ++;
-			if(type[IX(i1, j1)] != FLUID)
-				nonFluidNum ++;
-			if(nonFluidNum >= 3)
-			{
-				u[IX(x,y)] = u0[IX(x,y)];
-				continue;
-			}
-
-			u[IX(x,y)] = s0 * (t0*u0[IX(i0,j0)] + t1*u0[IX(i0,j1)]) +
-						 s1 * (t0*u0[IX(i1,j0)] + t1*u0[IX(i1,j1)]);*/
-
-		}
+	for(int z = 1; z <= _Z; z++)
+		for(int y = 1; y <= _Y; y++)
+			for(int x = 1; x <= _X; x++)
+				if(type[IX(x, y, z)] == FLUID)
+				{
+					Pos pos = traceParticle(b, x, y, z, backward);
+					u[IX(x, y, z)] = getVelosity(b, pos.x, pos.y, pos.z, u0);
+				}
 }
 
 void FluidCube3D::set_bnd()
 {
 	//try to use free-slip condition
 	/*
-	for(int y = 1; y <= _H; y++)
+	for(int y = 1; y <= _Y; y++)
 	{
 		Vx[IX(1, y)] = -Vx[IX(2, y)];
-		Vx[IX(_W+1, y)] = -Vx[IX(_W, y)];
+		Vx[IX(_X+1, y)] = -Vx[IX(_X, y)];
 	}
-	for(int x = 1; x <= _W; x++)
+	for(int x = 1; x <= _X; x++)
 	{
 		Vy[IX(x, 1)] = -Vy[IX(x, 2)];
-		Vy[IX(x, _H+1)] = -Vy[IX(x, _H)];
+		Vy[IX(x, _Y+1)] = -Vy[IX(x, _Y)];
 	}
 	*/
-	for(int y = 1; y <= _H; y++)
-		for(int x = 1; x <= _W; x++)
-		{
-			if(type[IX(x, y)] != FLUID)
-				continue;
-
-			if(type[IX(x-1, y)] == SOLID)
-				Vx[IX(x, y)] = 0;
-			if(type[IX(x, y-1)] == SOLID)
-				Vy[IX(x, y)] = 0;
-
-			switch(neighAir[IX(x, y)])
+	for(int z = 1; z <= _Z; z++)
+		for(int y = 1; y <= _Y; y++)
+			for(int x = 1; x <= _X; x++)
 			{
-			case 0: 
-				break;
-			case 1: 
-				if(type[IX(x-1, y)] == AIR)
-					Vx[IX(x,y)] = Vx[IX(x+1,y)] + Vy[IX(x,y+1)] - Vy[IX(x,y)];
-				else if(type[IX(x+1, y)] == AIR)
-					Vx[IX(x+1,y)] = Vx[IX(x,y)] - Vy[IX(x,y+1)] + Vy[IX(x,y)];
-				else if(type[IX(x, y-1)] == AIR)
-					Vy[IX(x,y)] = Vy[IX(x,y+1)] + Vx[IX(x+1,y)] - Vx[IX(x,y)];
-				else if(type[IX(x, y+1)] == AIR)
-					Vy[IX(x,y+1)] = Vy[IX(x,y)] - Vx[IX(x+1,y)] + Vx[IX(x,y)];
-				break;
-			case 2:
-				if(type[IX(x-1, y)] == AIR)
-					if(type[IX(x+1, y)] == AIR)
-						break;
-					else
-						Vx[IX(x,y)] = Vx[IX(x+1,y)];
-				else
-					if(type[IX(x+1, y)] == AIR)
-						Vx[IX(x+1,y)] = Vx[IX(x,y)];
-					else
-						break;
-				if(type[IX(x, y-1)] == AIR)
-					Vy[IX(x,y)] = Vy[IX(x,y+1)];
-				else
-					Vy[IX(x,y+1)] = Vy[IX(x,y)];
-				break;
-			case 3:
-				
-				if(type[IX(x+1, y)] != AIR)
-					Vx[IX(x,y)] = Vx[IX(x+1,y)] + Vy[IX(x,y+1)] - Vy[IX(x,y)];
-				else if(type[IX(x-1, y)] != AIR)
-					Vx[IX(x+1,y)] = Vx[IX(x,y)] - Vy[IX(x,y+1)] + Vy[IX(x,y)];
-				else if(type[IX(x, y+1)] != AIR)
-					Vy[IX(x,y)] = Vy[IX(x,y+1)] + Vx[IX(x+1,y)] - Vx[IX(x,y)];
-				else if(type[IX(x, y-1)] != AIR)
-					Vy[IX(x,y+1)] = Vy[IX(x,y)] - Vx[IX(x+1,y)] + Vx[IX(x,y)];
-				break;
-				
-				/*
-				if(type[IX(x+1, y)] != AIR)
-					Vx[IX(x,y)] = Vx[IX(x+1,y)];
-				else if(type[IX(x-1, y)] != AIR)
-					Vx[IX(x+1,y)] = Vx[IX(x,y)];
-				else if(type[IX(x, y+1)] != AIR)
-					Vy[IX(x,y)] = Vy[IX(x,y+1)];
-				else if(type[IX(x, y-1)] != AIR)
-					Vy[IX(x,y+1)] = Vy[IX(x,y)];
-				*/
-				break;
-			case 4:
-				break;
+				if(type[IX(x, y, z)] != FLUID)
+					continue;
+
+				if(type[IX(x-1, y, z)] == SOLID)
+					Vx[IX(x, y, z)] = 0;
+				if(type[IX(x, y-1, z)] == SOLID)
+					Vy[IX(x, y, z)] = 0;
+				if(type[IX(x, y, z-1)] == SOLID)
+					Vz[IX(x, y, z)] = 0;
+
+				switch(neighAir[IX(x, y, z)])
+				{
+				case 0: 
+					break;
+				case 1: 
+					{
+					if(type[IX(x-1, y, z)] == AIR)
+						Vx[IX(x,y,z)] = Vx[IX(x+1,y,z)] + Vy[IX(x,y+1,z)] - Vy[IX(x,y,z)] + Vz[IX(x,y,z+1)] - Vz[IX(x,y,z)];
+					else if(type[IX(x+1, y, z)] == AIR)
+						Vx[IX(x+1,y,z)] = Vx[IX(x,y,z)] - Vy[IX(x,y+1,z)] + Vy[IX(x,y,z)] - Vz[IX(x,y,z+1)] + Vz[IX(x,y,z)];
+					else if(type[IX(x, y-1, z)] == AIR)
+						Vy[IX(x,y,z)] = Vy[IX(x,y+1,z)] + Vx[IX(x+1,y,z)] - Vx[IX(x,y,z)] + Vz[IX(x,y,z+1)] - Vz[IX(x,y,z)];
+					else if(type[IX(x, y+1, z)] == AIR)
+						Vy[IX(x,y+1,z)] = Vy[IX(x,y,z)] - Vx[IX(x+1,y,z)] + Vx[IX(x,y,z)] - Vz[IX(x,y,z+1)] + Vz[IX(x,y,z)];
+					else if(type[IX(x, y, z-1)] == AIR)
+						Vz[IX(x,y,z)] = Vz[IX(x,y,z+1)] + Vx[IX(x+1,y,z)] - Vx[IX(x,y,z)] + Vy[IX(x,y+1,z)] - Vy[IX(x,y,z)];
+					else if(type[IX(x, y, z+1)] == AIR)
+						Vz[IX(x,y,z+1)] = Vz[IX(x,y,z)] - Vx[IX(x+1,y,z)] + Vx[IX(x,y,z)] - Vy[IX(x,y+1,z)] + Vy[IX(x,y,z)];
+					break;
+					}
+				case 2:
+					{
+					if(type[IX(x-1, y, z)] == AIR)
+					{
+						if(type[IX(x, y-1, z)] == AIR)
+						{
+							float half = 0.5 * (Vz[IX(x, y, z)] - Vz[IX(x, y, z+1)]);
+							Vx[IX(x, y, z)] = Vx[IX(x+1, y, z)] + half;
+							Vy[IX(x, y, z)] = Vy[IX(x, y+1, z)] + half;
+						}
+						else if(type[IX(x, y+1, z)] == AIR)
+						{
+							float half = 0.5 * (Vz[IX(x, y, z)] - Vz[IX(x, y, z+1)]);
+							Vx[IX(x, y, z)] = Vx[IX(x+1, y, z)] + half;
+							Vy[IX(x, y+1, z)] = Vy[IX(x, y, z)] + half;
+						}
+						else if(type[IX(x, y, z-1)] == AIR)
+						{
+							float half = 0.5 * (Vy[IX(x, y, z)] - Vy[IX(x, y+1, z)]);
+							Vx[IX(x, y, z)] = Vx[IX(x+1, y, z)] + half;
+							Vz[IX(x, y, z)] = Vz[IX(x, y, z+1)] + half;
+						}
+						else if(type[IX(x, y, z+1)] == AIR)
+						{
+							float half = 0.5 * (Vy[IX(x, y, z)] - Vy[IX(x, y+1, z)]);
+							Vx[IX(x, y, z)] = Vx[IX(x+1, y, z)] + half;
+							Vz[IX(x, y, z+1)] = Vz[IX(x, y, z)] + half;
+						}
+					}
+					else if(type[IX(x+1, y, z)] == AIR)
+					{
+						if(type[IX(x, y-1, z)] == AIR)
+						{
+							float half = 0.5 * (Vz[IX(x, y, z)] - Vz[IX(x, y, z+1)]);
+							Vx[IX(x+1, y, z)] = Vx[IX(x, y, z)] + half;
+							Vy[IX(x, y, z)] = Vy[IX(x, y+1, z)] + half;
+						}
+						else if(type[IX(x, y+1, z)] == AIR)
+						{
+							float half = 0.5 * (Vz[IX(x, y, z)] - Vz[IX(x, y, z+1)]);
+							Vx[IX(x+1, y, z)] = Vx[IX(x, y, z)] + half;
+							Vy[IX(x, y+1, z)] = Vy[IX(x, y, z)] + half;
+						}
+						else if(type[IX(x, y, z-1)] == AIR)
+						{
+							float half = 0.5 * (Vy[IX(x, y, z)] - Vy[IX(x, y+1, z)]);
+							Vx[IX(x+1, y, z)] = Vx[IX(x, y, z)] + half;
+							Vz[IX(x, y, z)] = Vz[IX(x, y, z+1)] + half;
+						}
+						else if(type[IX(x, y, z+1)] == AIR)
+						{
+							float half = 0.5 * (Vy[IX(x, y, z)] - Vy[IX(x, y+1, z)]);
+							Vx[IX(x+1, y, z)] = Vx[IX(x, y, z)] + half;
+							Vz[IX(x, y, z+1)] = Vz[IX(x, y, z)] + half;
+						}
+					}
+					else if(type[IX(x, y-1, z)] == AIR)
+					{
+						if(type[IX(x, y, z-1)] == AIR)
+						{
+							float half = 0.5 * (Vx[IX(x, y, z)] - Vx[IX(x+1, y, z)]);
+							Vy[IX(x, y, z)] = Vy[IX(x, y+1, z)] + half;
+							Vz[IX(x, y, z)] = Vz[IX(x, y, z+1)] + half;
+						}
+						else if(type[IX(x, y, z+1)] == AIR)
+						{
+							float half = 0.5 * (Vx[IX(x, y, z)] - Vx[IX(x+1, y, z)]);
+							Vy[IX(x, y, z)] = Vy[IX(x, y+1, z)] + half;
+							Vz[IX(x, y, z+1)] = Vz[IX(x, y, z)] + half;
+						}
+					}
+					else if(type[IX(x, y+1, z)] == AIR)
+					{
+						if(type[IX(x, y, z-1)] == AIR)
+						{
+							float half = 0.5 * (Vx[IX(x, y, z)] - Vx[IX(x+1, y, z)]);
+							Vy[IX(x, y+1, z)] = Vy[IX(x, y, z)] + half;
+							Vz[IX(x, y, z)] = Vz[IX(x, y, z+1)] + half;
+						}
+						else if(type[IX(x, y, z+1)] == AIR)
+						{
+							float half = 0.5 * (Vx[IX(x, y, z)] - Vx[IX(x+1, y, z)]);
+							Vy[IX(x, y+1, z)] = Vy[IX(x, y, z)] + half;
+							Vz[IX(x, y, z+1)] = Vz[IX(x, y, z)] + half;
+						}
+					}
+					break;
+					}
+				case 3:
+					{
+					bool tx0 = (type[IX(x-1, y, z)] == AIR && type[IX(x+1, y, z)] != AIR);
+					bool tx1 = (type[IX(x+1, y, z)] == AIR && type[IX(x-1, y, z)] != AIR);
+					bool ty0 = (type[IX(x, y-1, z)] == AIR && type[IX(x, y+1, z)] != AIR);
+					bool ty1 = (type[IX(x, y+1, z)] == AIR && type[IX(x, y-1, z)] != AIR);
+					bool tz0 = (type[IX(x, y, z-1)] == AIR && type[IX(x, y, z+1)] != AIR);
+					bool tz1 = (type[IX(x, y, z+1)] == AIR && type[IX(x, y, z-1)] != AIR);
+					if(tx0 && ty0 && tz0)
+					{
+						Vx[IX(x, y, z)] = Vx[IX(x+1, y, z)];
+						Vy[IX(x, y, z)] = Vy[IX(x, y+1, z)];
+						Vz[IX(x, y, z)] = Vz[IX(x, y, z+1)];
+					}
+					else if(tx1 && ty0 && tz0)
+					{
+						Vx[IX(x+1, y, z)] = Vx[IX(x, y, z)];
+						Vy[IX(x, y, z)] = Vy[IX(x, y+1, z)];
+						Vz[IX(x, y, z)] = Vz[IX(x, y, z+1)];
+					}
+					else if(tx0 && ty1 && tz0)
+					{
+						Vx[IX(x, y, z)] = Vx[IX(x+1, y, z)];
+						Vy[IX(x, y+1, z)] = Vy[IX(x, y, z)];
+						Vz[IX(x, y, z)] = Vz[IX(x, y, z+1)];
+					}
+					else if(tx1 && ty1 && tz0)
+					{
+						Vx[IX(x+1, y, z)] = Vx[IX(x, y, z)];
+						Vy[IX(x+1, y, z)] = Vy[IX(x, y, z)];
+						Vz[IX(x, y, z)] = Vz[IX(x, y, z+1)];
+					}
+					else if(tx0 && ty0 && tz1)
+					{
+						Vx[IX(x, y, z)] = Vx[IX(x+1, y, z)];
+						Vy[IX(x, y, z)] = Vy[IX(x, y+1, z)];
+						Vz[IX(x, y, z+1)] = Vz[IX(x, y, z)];
+					}
+					else if(tx1 && ty0 && tz1)
+					{
+						Vx[IX(x+1, y, z)] = Vx[IX(x, y, z)];
+						Vy[IX(x, y, z)] = Vy[IX(x, y+1, z)];
+						Vz[IX(x, y, z+1)] = Vz[IX(x, y, z)];
+					}
+					else if(tx0 && ty1 && tz1)
+					{
+						Vx[IX(x, y, z)] = Vx[IX(x+1, y, z)];
+						Vy[IX(x, y+1, z)] = Vy[IX(x, y, z)];
+						Vz[IX(x, y, z+1)] = Vz[IX(x, y, z)];
+					}
+					else if(tx1 && ty1 && tz1)
+					{
+						Vx[IX(x+1, y, z)] = Vx[IX(x, y, z)];
+						Vy[IX(x, y+1, z)] = Vy[IX(x, y, z)];
+						Vz[IX(x, y, z+1)] = Vz[IX(x, y, z)];
+					}
+					else if(tx0 && !(ty0||ty1) )
+						Vx[IX(x,y,z)] = Vx[IX(x+1,y,z)] + Vy[IX(x,y+1,z)] - Vy[IX(x,y,z)] + Vz[IX(x,y,z+1)] - Vz[IX(x,y,z)];
+					else if(tx1 && !(ty0||ty1) )
+						Vx[IX(x+1,y,z)] = Vx[IX(x,y,z)] - Vy[IX(x,y+1,z)] + Vy[IX(x,y,z)] - Vz[IX(x,y,z+1)] + Vz[IX(x,y,z)];
+					else if(ty0 && !(tx0||tx1) )
+						Vy[IX(x,y,z)] = Vy[IX(x,y+1,z)] + Vx[IX(x+1,y,z)] - Vx[IX(x,y,z)] + Vz[IX(x,y,z+1)] - Vz[IX(x,y,z)];
+					else if(ty1 && !(tx0||tx1) )
+						Vy[IX(x,y+1,z)] = Vy[IX(x,y,z)] - Vx[IX(x+1,y,z)] + Vx[IX(x,y,z)] - Vz[IX(x,y,z+1)] + Vz[IX(x,y,z)];
+					else if(tz0 && !(tx0||tx1) )
+						Vz[IX(x,y,z)] = Vz[IX(x,y,z+1)] + Vx[IX(x+1,y,z)] - Vx[IX(x,y,z)] + Vy[IX(x,y+1,z)] - Vy[IX(x,y,z)];
+					else if(tz1 && !(tx0||tx1) )
+						Vz[IX(x,y,z+1)] = Vz[IX(x,y,z)] - Vx[IX(x+1,y,z)] + Vx[IX(x,y,z)] - Vy[IX(x,y+1,z)] + Vy[IX(x,y,z)];
+					break;
+					}
+				case 4:
+					{
+					if(type[IX(x+1, y, z)] != AIR)
+					{
+						if(type[IX(x, y+1, z)] != AIR)
+						{
+							float half = 0.5 * (Vz[IX(x, y, z)] - Vz[IX(x, y, z+1)]);
+							Vx[IX(x, y, z)] = Vx[IX(x+1, y, z)] + half;
+							Vy[IX(x, y, z)] = Vy[IX(x, y+1, z)] + half;
+						}
+						else if(type[IX(x, y-1, z)] != AIR)
+						{
+							float half = 0.5 * (Vz[IX(x, y, z)] - Vz[IX(x, y, z+1)]);
+							Vx[IX(x, y, z)] = Vx[IX(x+1, y, z)] + half;
+							Vy[IX(x, y+1, z)] = Vy[IX(x, y, z)] + half;
+						}
+						else if(type[IX(x, y, z+1)] != AIR)
+						{
+							float half = 0.5 * (Vy[IX(x, y, z)] - Vy[IX(x, y+1, z)]);
+							Vx[IX(x, y, z)] = Vx[IX(x+1, y, z)] + half;
+							Vz[IX(x, y, z)] = Vz[IX(x, y, z+1)] + half;
+						}
+						else if(type[IX(x, y, z-1)] != AIR)
+						{
+							float half = 0.5 * (Vy[IX(x, y, z)] - Vy[IX(x, y+1, z)]);
+							Vx[IX(x, y, z)] = Vx[IX(x+1, y, z)] + half;
+							Vz[IX(x, y, z+1)] = Vz[IX(x, y, z)] + half;
+						}
+					}
+					else if(type[IX(x-1, y, z)] != AIR)
+					{
+						if(type[IX(x, y+1, z)] != AIR)
+						{
+							float half = 0.5 * (Vz[IX(x, y, z)] - Vz[IX(x, y, z+1)]);
+							Vx[IX(x+1, y, z)] = Vx[IX(x, y, z)] + half;
+							Vy[IX(x, y, z)] = Vy[IX(x, y+1, z)] + half;
+						}
+						else if(type[IX(x, y-1, z)] != AIR)
+						{
+							float half = 0.5 * (Vz[IX(x, y, z)] - Vz[IX(x, y, z+1)]);
+							Vx[IX(x+1, y, z)] = Vx[IX(x, y, z)] + half;
+							Vy[IX(x, y+1, z)] = Vy[IX(x, y, z)] + half;
+						}
+						else if(type[IX(x, y, z+1)] != AIR)
+						{
+							float half = 0.5 * (Vy[IX(x, y, z)] - Vy[IX(x, y+1, z)]);
+							Vx[IX(x+1, y, z)] = Vx[IX(x, y, z)] + half;
+							Vz[IX(x, y, z)] = Vz[IX(x, y, z+1)] + half;
+						}
+						else if(type[IX(x, y, z-1)] != AIR)
+						{
+							float half = 0.5 * (Vy[IX(x, y, z)] - Vy[IX(x, y+1, z)]);
+							Vx[IX(x+1, y, z)] = Vx[IX(x, y, z)] + half;
+							Vz[IX(x, y, z+1)] = Vz[IX(x, y, z)] + half;
+						}
+					}
+					else if(type[IX(x, y+1, z)] != AIR)
+					{
+						if(type[IX(x, y, z+1)] != AIR)
+						{
+							float half = 0.5 * (Vx[IX(x, y, z)] - Vx[IX(x+1, y, z)]);
+							Vy[IX(x, y, z)] = Vy[IX(x, y+1, z)] + half;
+							Vz[IX(x, y, z)] = Vz[IX(x, y, z+1)] + half;
+						}
+						else if(type[IX(x, y, z-1)] != AIR)
+						{
+							float half = 0.5 * (Vx[IX(x, y, z)] - Vx[IX(x+1, y, z)]);
+							Vy[IX(x, y, z)] = Vy[IX(x, y+1, z)] + half;
+							Vz[IX(x, y, z+1)] = Vz[IX(x, y, z)] + half;
+						}
+					}
+					else if(type[IX(x, y-1, z)] != AIR)
+					{
+						if(type[IX(x, y, z+1)] != AIR)
+						{
+							float half = 0.5 * (Vx[IX(x, y, z)] - Vx[IX(x+1, y, z)]);
+							Vy[IX(x, y+1, z)] = Vy[IX(x, y, z)] + half;
+							Vz[IX(x, y, z)] = Vz[IX(x, y, z+1)] + half;
+						}
+						else if(type[IX(x, y, z-1)] != AIR)
+						{
+							float half = 0.5 * (Vx[IX(x, y, z)] - Vx[IX(x+1, y, z)]);
+							Vy[IX(x, y+1, z)] = Vy[IX(x, y, z)] + half;
+							Vz[IX(x, y, z+1)] = Vz[IX(x, y, z)] + half;
+						}
+					}
+					else if(type[IX(x-1, y, z)] != AIR && type[IX(x+1, y, z)] != AIR)
+					{
+						float div4 = -(Vx[IX(x+1,y,z)]-Vx[IX(x,y,z)] + Vy[IX(x,y+1,z)]-Vy[IX(x,y,z)]
+									 + Vz[IX(x,y,z+1)]-Vz[IX(x,y,z)]) / 4;
+						Vy[IX(x, y, z)] += div4;
+						Vz[IX(x, y, z)] += div4;
+						Vy[IX(x, y+1, z)] += div4;
+						Vz[IX(x, y, z+1)] += div4;
+					}
+					else if(type[IX(x, y-1, z)] != AIR && type[IX(x, y+1, z)] != AIR)
+					{
+						float div4 = -(Vx[IX(x+1,y,z)]-Vx[IX(x,y,z)] + Vy[IX(x,y+1,z)]-Vy[IX(x,y,z)]
+									 + Vz[IX(x,y,z+1)]-Vz[IX(x,y,z)]) / 4;
+						Vx[IX(x, y, z)] += div4;
+						Vz[IX(x, y, z)] += div4;
+						Vx[IX(x+1, y, z)] += div4;
+						Vz[IX(x, y, z+1)] += div4;
+					}
+					else if(type[IX(x, y, z-1)] != AIR && type[IX(x, y, z+1)] != AIR)
+					{
+						float div4 = -(Vx[IX(x+1,y,z)]-Vx[IX(x,y,z)] + Vy[IX(x,y+1,z)]-Vy[IX(x,y,z)]
+									 + Vz[IX(x,y,z+1)]-Vz[IX(x,y,z)]) / 4;
+						Vx[IX(x, y, z)] += div4;
+						Vy[IX(x, y, z)] += div4;
+						Vx[IX(x+1, y, z)] += div4;
+						Vy[IX(x, y+1, z)] += div4;
+					}
+					break;
+					}
+				case 5:
+					{
+					if(type[IX(x+1, y, z)] != AIR)
+						Vx[IX(x,y,z)] = Vx[IX(x+1,y,z)] + Vy[IX(x,y+1,z)] - Vy[IX(x,y,z)] + Vz[IX(x,y,z+1)] - Vz[IX(x,y,z)];
+					else if(type[IX(x-1, y, z)] != AIR)
+						Vx[IX(x+1,y,z)] = Vx[IX(x,y,z)] - Vy[IX(x,y+1,z)] + Vy[IX(x,y,z)] - Vz[IX(x,y,z+1)] + Vz[IX(x,y,z)];
+					else if(type[IX(x, y+1, z)] != AIR)
+						Vy[IX(x,y,z)] = Vy[IX(x,y+1,z)] + Vx[IX(x+1,y,z)] - Vx[IX(x,y,z)] + Vz[IX(x,y,z+1)] - Vz[IX(x,y,z)];
+					else if(type[IX(x, y-1, z)] != AIR)
+						Vy[IX(x,y+1,z)] = Vy[IX(x,y,z)] - Vx[IX(x+1,y,z)] + Vx[IX(x,y,z)] - Vz[IX(x,y,z+1)] + Vz[IX(x,y,z)];
+					else if(type[IX(x, y, z+1)] != AIR)
+						Vz[IX(x,y,z)] = Vz[IX(x,y,z+1)] + Vx[IX(x+1,y,z)] - Vx[IX(x,y,z)] + Vy[IX(x,y+1,z)] - Vy[IX(x,y,z)];
+					else if(type[IX(x, y, z-1)] != AIR)
+						Vz[IX(x,y,z+1)] = Vz[IX(x,y,z)] - Vx[IX(x+1,y,z)] + Vx[IX(x,y,z)] - Vy[IX(x,y+1,z)] + Vy[IX(x,y,z)];
+					break;
+					}
+				case 6:
+					break;
+				}
 			}
-		}
 }
 
 void FluidCube3D::simulate()
@@ -645,27 +895,19 @@ void FluidCube3D::output(float *u)
 
 void FluidCube3D::render()
 {
-	//identify that we are currently modifying the projection matrix
-	glMatrixMode(GL_PROJECTION);
-	//load the identity matrix (clear old matrix)
-	glLoadIdentity();
-
-	//get the current window width/height
-	int w = glutGet(GLUT_WINDOW_WIDTH);
-	int h = glutGet(GLUT_WINDOW_HEIGHT);
-
-	//initialize the screen coordinates
-	//glOrtho(-w/2, w/2-1, -h/2, h/2-1, -1, 1);
-	glOrtho(-10, w+10, -10, h+10, -1, 1);
-
-	//now we are editing the modelview matrix
 	glMatrixMode(GL_MODELVIEW);
+	// Reset transformations
 	glLoadIdentity();
+	glScalef(0.02f, 0.02f, 0.02f);
+
+	// Set the camera
+	gluLookAt(	px, py, pz,
+				0, 0, 0,
+				0.0f, 1.0f, 0.0f);
 
 	//clear the screen to a desired color in range [0-1] RGBA
 	glClearColor(0.5, 0.5, 0.5, 1);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 	//enable blending for translucency
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -685,72 +927,106 @@ void FluidCube3D::render()
 	//calculate divergence
 	if(renderType == DIVERGENCE)
 	{
-		for(int y = 1; y <= _H; y++)
-			for(int x = 1; x <= _W; x++)
-			{
-				if(type[IX(x, y)] != FLUID)
-					continue;
-				div[IX(x, y)] = (Vx[IX(x+1,y)]-Vx[IX(x,y)] + Vy[IX(x,y+1)]-Vy[IX(x,y)]);
-			}
+		for(int z = 1; z <= _Z; z++)
+			for(int y = 1; y <= _Y; y++)
+				for(int x = 1; x <= _X; x++)
+				{
+					if(type[IX(x, y, z)] != FLUID)
+						continue;
+					div[IX(x, y, z)] = (Vx[IX(x+1,y,z)]-Vx[IX(x,y,z)] + Vy[IX(x,y+1,z)]-Vy[IX(x,y,z)]
+										+ Vz[IX(x,y,z+1)]-Vz[IX(x,y,z)]);
+				}
 	}
 
-	for(int i = 0; i <= _W+1; i++)
-		for(int j = 0; j <= _H+1; j++)
-		{
-			int x = i;
-			int y = j;
-			float color;
-
-			if(type[IX(x, y)] == SOLID)
-				glColor3f(0, 0.5, 0);
-			
-			else if(type[IX(x, y)] == FLUID)
-				switch(renderType)
+	glTranslatef(-LENGTH/2, -LENGTH/2, -LENGTH/2);
+	for(int k = 0; k < _Z; k++)	
+		for(int j = 0; j < _Y; j++)
+			for(int i = 0; i < _X; i++)
+			{
+				int x = i+1;
+				int y = j+1;
+				int z = k+1;
+				float color;
+				if(type[IX(x, y, z)] == SOLID)
+					glColor3f(0, 0.7, 0);
+				else if(type[IX(x, y, z)] == FLUID)
 				{
-				case FLUIDGRID:
-					glColor3f(0, 0, 0.7);
-					break;
-				case PRESSURE:
-					glColor3f(p[pos2index[IX(x,y)]]/max_p, 0, 0);
-					break;
-				case VELOSITYY:
-					if(Vy[IX(x, y)] >= 0)
-						glColor3f(Vy[IX(x, y)]/max_vy, 0, 0);
-					else
-						glColor3f(0, -Vy[IX(x, y)]/max_vy, 0);
-					break;
-				case VELOSITYX:
-					if(Vx[IX(x, y)] >= 0)
-						glColor3f(Vx[IX(x, y)]/max_vx, 0, 0);
-					else
-						glColor3f(0, -Vx[IX(x, y)]/max_vx, 0);
-					break;
-				case DIVERGENCE:
-					if(fabs(div[IX(x, y)]) > 1e-5)
-						glColor3f(1, 0, 0);
-					else
+					switch(renderType)
+					{
+					case FLUIDGRID:
 						glColor3f(0, 0, 0.7);
-					break;
-				case PARTICLE:
-					glColor3f(0.5, 0.5, 0.5);
-					break;
-				default:
-					glColor3f(0, 0, 0.7);
-					break;
-				//vorticity
-				//float w = 0.5 * (Vy[IX(x+1, y)] - Vy[IX(x-1, y)]);
-				//		  - 0.5 * (Vx[IX(x, y+1)] - Vx[IX(x, y-1)]);
+						break;
+					case PRESSURE:
+						glColor3f(p[pos2index[IX(x,y,z)]]/max_p, 0, 0);
+						break;
+					case VELOSITYY:
+						if(Vy[IX(x, y, z)] >= 0)
+							glColor3f(Vy[IX(x, y, z)]/max_vy, 0, 0);
+						else
+							glColor3f(0, -Vy[IX(x, y, z)]/max_vy, 0);
+						break;
+					case VELOSITYX:
+						if(Vx[IX(x, y, z)] >= 0)
+							glColor3f(Vx[IX(x, y, z)]/max_vx, 0, 0);
+						else
+							glColor3f(0, -Vx[IX(x, y, z)]/max_vx, 0);
+						break;
+					case DIVERGENCE:
+						if(fabs(div[IX(x, y, z)]) > 1e-5)
+							glColor3f(1, 0, 0);
+						else
+							glColor3f(0, 0, 0.7);
+						break;
+					case PARTICLE:
+						continue;
+						break;
+					default:
+						glColor3f(0, 0, 0.7);
+						break;
+					//vorticity
+					//float w = 0.5 * (Vy[IX(x+1, y)] - Vy[IX(x-1, y)]);
+					//		  - 0.5 * (Vx[IX(x, y+1)] - Vx[IX(x, y-1)]);
+					}
 				}
+				else
+					continue;
 
-			glBegin(GL_QUADS);
-			glVertex2f(i*GRIDSIZE, j*GRIDSIZE);
-			glVertex2f((i+1)*GRIDSIZE, j*GRIDSIZE);
-			glVertex2f((i+1)*GRIDSIZE, (j+1)*GRIDSIZE);
-			glVertex2f(i*GRIDSIZE, (j+1)*GRIDSIZE);
-			glEnd();
-			//if(GRIDSIZE >= 10 && type[IX(x, y)] == FLUID)
-			//	draw_velo(i, j, Vx[IX(x, y)], Vy[IX(x, y)]);
-		}
+				//draw cube 
+				glBegin(GL_QUADS);
+				//hold k
+				glVertex3f(i*GRIDSIZE, j*GRIDSIZE, k*GRIDSIZE);
+				glVertex3f(i*GRIDSIZE, (j+1)*GRIDSIZE, k*GRIDSIZE);
+				glVertex3f((i+1)*GRIDSIZE, (j+1)*GRIDSIZE, k*GRIDSIZE);
+				glVertex3f((i+1)*GRIDSIZE, j*GRIDSIZE, k*GRIDSIZE);
+				//hold k+1
+				glVertex3f(i*GRIDSIZE, j*GRIDSIZE, (k+1)*GRIDSIZE);
+				glVertex3f((i+1)*GRIDSIZE, j*GRIDSIZE, (k+1)*GRIDSIZE);
+				glVertex3f((i+1)*GRIDSIZE, (j+1)*GRIDSIZE, (k+1)*GRIDSIZE);
+				glVertex3f(i*GRIDSIZE, (j+1)*GRIDSIZE, (k+1)*GRIDSIZE);
+				//hold j
+				glVertex3f(i*GRIDSIZE, j*GRIDSIZE, k*GRIDSIZE);
+				glVertex3f((i+1)*GRIDSIZE, j*GRIDSIZE, k*GRIDSIZE);
+				glVertex3f((i+1)*GRIDSIZE, j*GRIDSIZE, (k+1)*GRIDSIZE);
+				glVertex3f(i*GRIDSIZE, j*GRIDSIZE, (k+1)*GRIDSIZE);
+				//hold j+1
+				glVertex3f(i*GRIDSIZE, (j+1)*GRIDSIZE, k*GRIDSIZE);
+				glVertex3f(i*GRIDSIZE, (j+1)*GRIDSIZE, (k+1)*GRIDSIZE);
+				glVertex3f((i+1)*GRIDSIZE, (j+1)*GRIDSIZE, (k+1)*GRIDSIZE);
+				glVertex3f((i+1)*GRIDSIZE, (j+1)*GRIDSIZE, k*GRIDSIZE);
+				//hold i
+				glVertex3f(i*GRIDSIZE, j*GRIDSIZE, k*GRIDSIZE);
+				glVertex3f(i*GRIDSIZE, j*GRIDSIZE, (k+1)*GRIDSIZE);
+				glVertex3f(i*GRIDSIZE, (j+1)*GRIDSIZE, (k+1)*GRIDSIZE);
+				glVertex3f(i*GRIDSIZE, (j+1)*GRIDSIZE, k*GRIDSIZE);
+				//hold i+1
+				glVertex3f((i+1)*GRIDSIZE, j*GRIDSIZE, k*GRIDSIZE);
+				glVertex3f((i+1)*GRIDSIZE, (j+1)*GRIDSIZE, k*GRIDSIZE);
+				glVertex3f((i+1)*GRIDSIZE, (j+1)*GRIDSIZE, (k+1)*GRIDSIZE);
+				glVertex3f((i+1)*GRIDSIZE, j*GRIDSIZE, (k+1)*GRIDSIZE);
+				glEnd();
+				//if(GRIDSIZE >= 10 && type[IX(x, y)] == FLUID)
+				//	draw_velo(i, j, Vx[IX(x, y)], Vy[IX(x, y)]);
+			}
 
 	//draw particles
 	if(renderType == PARTICLE)
@@ -759,7 +1035,7 @@ void FluidCube3D::render()
 		glBegin(GL_POINTS);
 		for(unsigned i = 0; i < particles.size(); i++)
 		{
-			glVertex2f(particles[i].x*GRIDSIZE, particles[i].y*GRIDSIZE);
+			glVertex3f(particles[i].x*GRIDSIZE, particles[i].y*GRIDSIZE, particles[i].z*GRIDSIZE);
 		}
 		glEnd();
 	}
@@ -785,9 +1061,8 @@ bool FluidCube3D::calculateTimeStep()
 	else
 		dt = h / max_v;
 	//if(dt > frameTime)
-	//	dt = frameTime;
-	
-	//return true;
+	dt = frameTime;
+	return true;
 
 	if(ctime + dt >= frameTime)
 	{
@@ -810,57 +1085,67 @@ void FluidCube3D::updateParticles()
 	{
 		float x0 = particles[i].x;
 		float y0 = particles[i].y;
-		float vx0 = getVelosity(1, x0, y0, Vx);
-		float vy0 = getVelosity(2, x0, y0, Vy);
+		float z0 = particles[i].z;
+		Velo v0 = getVelosity(x0, y0, z0, Vx, Vy, Vz);
 
-		float x1 = x0 + dt * vx0 * hi;
-		float y1 = y0 + dt * vy0 * hi;
+		float x1 = x0 + dt * v0.x * hi;
+		float y1 = y0 + dt * v0.y * hi;
+		float z1 = z0 + dt * v0.z * hi;
 		//if particle out of boundary??
-		if(x1 < 1 || x1 >= _W+1 || y1 < 1 || y1 >= _H+1)
+		if(x1 < 1 || x1 >= _X+1 || y1 < 1 || y1 >= _Y+1 || z1 < 1 || z1 >= _Z+1)
 		{
 			std::cout<<"Particle out of bound"<<std::endl;
 			REPORT(x1);
 			REPORT(y1);
+			REPORT(z1);
 			//system("pause");
 		}
 		if(x1 < 1)
 			x1 = 1;
-		if(x1 >= _W+1)
-			x1 = _W+0.999;
+		if(x1 >= _X+1)
+			x1 = _X+0.999;
 		if(y1 < 1)
 			y1 = 1;
-		if(y1 >= _H+1)
-			y1 = _H+0.999;
+		if(y1 >= _Y+1)
+			y1 = _Y+0.999;
+		if(z1 < 1)
+			z1 = 1;
+		if(z1 >= _Z+1)
+			z1 = _Z+0.999;
 
-		if(type[IX(int(x1), int(y1))] != FLUID)
+		if(type[IX(int(x1), int(y1), int(z1))] != FLUID)
 		{
-			particles[i] = Pos(x1, y1);
+			particles[i] = Pos(x1, y1, z1);
 			continue;
 		}
 
-		float vx1 = getVelosity(1, x1, y1, Vx);
-		float vy1 = getVelosity(2, x1, y1, Vy);
+		Velo v1 = getVelosity(x1, y1, z1, Vx, Vy, Vz);
+		x1 = x0 + dt * 0.5 * (v0.x + v1.x) * hi;
+		y1 = y0 + dt * 0.5 * (v0.y + v1.y) * hi;
+		z1 = z0 + dt * 0.5 * (v0.z + v1.z) * hi;
 		//if particle out of boundary???
-		if(x1 < 1 || x1 >= _W+1 || y1 < 1 || y1 >= _H+1)
+		if(x1 < 1 || x1 >= _X+1 || y1 < 1 || y1 >= _Y+1 || z1 < 1 || z1 >= _Z+1)
 		{
 			std::cout<<"Particle out of bound"<<std::endl;
 			REPORT(x1);
 			REPORT(y1);
+			REPORT(z1);
 			//system("pause");
 		}
-
-		x1 = x0 + dt * 0.5 * (vx0 + vx1) * hi;
-		y1 = y0 + dt * 0.5 * (vy0 + vy1) * hi;
 		if(x1 < 1)
 			x1 = 1;
-		if(x1 >= _W+1)
-			x1 = _W+0.999;
+		if(x1 >= _X+1)
+			x1 = _X+0.999;
 		if(y1 < 1)
 			y1 = 1;
-		if(y1 >= _H+1)
-			y1 = _H+0.999;
-		particles[i].x = x1;
-		particles[i].y = y1;
+		if(y1 >= _Y+1)
+			y1 = _Y+0.999;
+		if(z1 < 1)
+			z1 = 1;
+		if(z1 >= _Z+1)
+			z1 = _Z+0.999;
+
+		particles[i] = Pos(x1, y1, z1);
 	}
 }
 
@@ -871,71 +1156,68 @@ void FluidCube3D::updateGrid()
 	type = type0;
 	type0 = tmp;
 
-	for(int y = 1; y <= _H; y++)
-		for(int x = 1; x <= _W; x++)
-		{
-			if(type0[IX(x, y)] != SOLID)
+	for(int z = 1; z <= _Z; z++)
+		for(int y = 1; y <= _Y; y++)
+			for(int x = 1; x <= _X; x++)
 			{
-				type[IX(x, y)] = AIR;
-				invertedList[IX(x, y)]->clear();
+				if(type0[IX(x, y, z)] != SOLID)
+				{
+					type[IX(x, y, z)] = AIR;
+					invertedList[IX(x, y, z)]->clear();
+				}
 			}
-		}
 
 	for(unsigned i = 0; i < particles.size(); i++)
 	{
 		int x = particles[i].x;
 		int y = particles[i].y;
-		type[IX(x, y)] = FLUID;
-		invertedList[IX(x, y)]->push_back(i);
+		int z = particles[i].z;
+		type[IX(x, y, z)] = FLUID;
+		invertedList[IX(x, y, z)]->push_back(i);
 	}
 	
 	fluidNum = 0;
 	for(int i = 0; i < size; i++)
 		pos2index[i] = -1;
-	for(int y = 1; y <= _H; y++)
-		for(int x = 1; x <= _W; x++)
-			if(type[IX(x,y)] == FLUID)
-				pos2index[IX(x, y)] = fluidNum++;
+	for(int z = 1; z <= _Z; z++)
+		for(int y = 1; y <= _Y; y++)
+			for(int x = 1; x <= _X; x++)
+				if(type[IX(x, y, z)] == FLUID)
+					pos2index[IX(x, y, z)] = fluidNum++;
 
-	for(int y = 1; y <= _H; y++)
-		for(int x = 1; x <= _W; x++)
-		{
-			if(type[IX(x,y)] == FLUID)
+	for(int z = 1; z <= _Z; z++)
+		for(int y = 1; y <= _Y; y++)
+			for(int x = 1; x <= _X; x++)
 			{
-				neighNoneSolid[IX(x, y)] = 0;
-				neighAir[IX(x, y)] = 0;
-				for(int i = 0; i < 4; i++)
+				if(type[IX(x, y, z)] == FLUID)
 				{
-					int xx = x+dir[i][0];
-					int yy = y+dir[i][1];
-					neighbor[IX(x,y)][i] = pos2index[IX(xx, yy)];
-					if(type[IX(xx,yy)] != SOLID)
-						neighNoneSolid[IX(x, y)] ++;
-					if(type[IX(xx,yy)] == AIR)
-						neighAir[IX(x, y)] ++;
+					neighNoneSolid[IX(x, y, z)] = 0;
+					neighAir[IX(x, y, z)] = 0;
+					for(int i = 0; i < 6; i++)
+					{
+						int xx = x+dir[i][0];
+						int yy = y+dir[i][1];
+						int zz = z+dir[i][2];
+						neighbor[IX(x, y, z)][i] = pos2index[IX(xx, yy, zz)];
+						if(type[IX(xx, yy, zz)] != SOLID)
+							neighNoneSolid[IX(x, y, z)] ++;
+						if(type[IX(xx, yy, zz)] == AIR)
+							neighAir[IX(x, y, z)] ++;
+					}
 				}
-			}
 
-			//if(type[IX(x, y)] == AIR)
-			//	Vx[IX(x, y)] = Vy[IX(x, y)] = 0;
-
-			if(type0[IX(x, y)] == AIR && type[IX(x, y)] == FLUID)
+			//set velosity for new fluid cell
+			if(type0[IX(x, y, z)] == AIR && type[IX(x, y, z)] == FLUID)
 			{
-				float vx = 0, vy = 0;
-				int nx = 0, ny = 0;
 				float dist = 100;
 				int pid = -1;
 				//Vx
-				std::vector<int> *list = invertedList[IX(x, y)];
+				std::vector<int> *list = invertedList[IX(x, y, z)];
 				for(unsigned i = 0; i < list->size(); i++)
 				{
 					float x0 = particles[list->at(i)].x;
 					float y0 = particles[list->at(i)].y;
-					if( x0 <= x + 0.5)
-					{
-						nx ++;
-						vx += getVelosity(1, x0, y0, Vx);
-					}
+					float z0 = particles[list->at(i)].z;
 					/*
 					if(DISTANCE(x0, y0, x, y+0.5)< dist)
 					{
@@ -949,16 +1231,11 @@ void FluidCube3D::updateGrid()
 						pid = list->at(i);
 					}
 				}
-				list = invertedList[IX(x-1, y)];
+				list = invertedList[IX(x-1, y, z)];
 				for(unsigned i = 0; i < list->size(); i++)
 				{
 					float x0 = particles[list->at(i)].x;
 					float y0 = particles[list->at(i)].y;
-					if(x0 >= x - 0.5)
-					{
-						nx ++;
-						vx += getVelosity(1, x0, y0, Vx);
-					}
 					/*
 					if(DISTANCE(x0, y0, x, y+0.5) < dist)
 					{
@@ -972,26 +1249,15 @@ void FluidCube3D::updateGrid()
 						pid = list->at(i);
 					}
 				}
-				//if(nx > 0)
-				//	Vx[IX(x, y)] = vx / nx;
-				//else
-				{
-					//for simple only take the nearest particle in the cell
-					Vx[IX(x, y)] = getVelosity(1, particles[pid].x, particles[pid].y, Vx);
-				}
+				Vx[IX(x, y, z)] = getVelosity(1, particles[pid].x, particles[pid].y, particles[pid].z, Vx);
 
-				dist = 100;
 				//Vy
-				list = invertedList[IX(x, y)];
+				dist = 100;
+				list = invertedList[IX(x, y, z)];
 				for(unsigned i = 0; i < list->size(); i++)
 				{
 					float x0 = particles[list->at(i)].x;
 					float y0 = particles[list->at(i)].y;
-					if( y0 <= y + 0.5)
-					{
-						ny ++;
-						vy += getVelosity(2, x0, y0, Vy);
-					}
 					/*
 					if(DISTANCE(x0, y0, x+0.5, y) < dist)
 					{
@@ -1005,16 +1271,11 @@ void FluidCube3D::updateGrid()
 						pid = list->at(i);
 					}
 				}
-				list = invertedList[IX(x, y-1)];
+				list = invertedList[IX(x, y-1, z)];
 				for(unsigned i = 0; i < list->size(); i++)
 				{
 					float x0 = particles[list->at(i)].x;
 					float y0 = particles[list->at(i)].y;
-					if(y0 >= y - 0.5)
-					{
-						ny ++;
-						vy += getVelosity(2, x0, y0, Vy);
-					}
 					/*
 					if(DISTANCE(x0, y0, x+0.5, y) < dist)
 					{
@@ -1028,100 +1289,145 @@ void FluidCube3D::updateGrid()
 						pid = list->at(i);
 					}
 				}
-				//if(ny > 0)
-				//	Vy[IX(x, y)] = vy / ny;
-				//else
+				Vy[IX(x, y, z)] = getVelosity(2, particles[pid].x, particles[pid].y, particles[pid].z, Vy);
+				
+				//Vy
+				dist = 100;
+				list = invertedList[IX(x, y, z)];
+				for(unsigned i = 0; i < list->size(); i++)
 				{
-					//for simple only take the nearest particle in the cell
-					Vy[IX(x, y)] = getVelosity(2, particles[pid].x, particles[pid].y, Vy);
+					float x0 = particles[list->at(i)].x;
+					float y0 = particles[list->at(i)].y;
+					float z0 = particles[list->at(i)].z;
+					/*
+					if(DISTANCE(x0, y0, x+0.5, y) < dist)
+					{
+						dist = DISTANCE(x0, y0, x+0.5, y);
+						pid = list->at(i);
+					}
+					*/
+					if(z0 - z < dist)
+					{
+						dist = z0 - z;
+						pid = list->at(i);
+					}
 				}
+				list = invertedList[IX(x, y, z-1)];
+				for(unsigned i = 0; i < list->size(); i++)
+				{
+					float x0 = particles[list->at(i)].x;
+					float y0 = particles[list->at(i)].y;
+					float z0 = particles[list->at(i)].z;
+					/*
+					if(DISTANCE(x0, y0, x+0.5, y) < dist)
+					{
+						dist = DISTANCE(x0, y0, x+0.5, y);
+						pid = list->at(i);
+					}
+					*/
+					if(z - z0 < dist)
+					{
+						dist = z - z0;
+						pid = list->at(i);
+					}
+				}
+				Vz[IX(x, y, z)] = getVelosity(3, particles[pid].x, particles[pid].y, particles[pid].z, Vz);
 			}
+
 		}
 
 
 	//init Matrix
 	A = Eigen::SparseMatrix<double>(fluidNum, fluidNum);         // default is column major
-	A.reserve(Eigen::VectorXi::Constant(fluidNum, 5));
+	A.reserve(Eigen::VectorXi::Constant(fluidNum, 7));
 	int index = 0;
-	for(int y = 1; y <= _H; y++)
-		for(int x = 1; x <= _W; x++)
-		{
-			if(type[IX(x, y)] != FLUID)
-				continue;
+	for(int z = 1; z <= _Z; z++)
+		for(int y = 1; y <= _Y; y++)
+			for(int x = 1; x <= _X; x++)
+			{
+				if(type[IX(x, y, z)] != FLUID)
+					continue;
 
-			//SparseVecf A0(fluidNum);
-			//A0.Begin();
-			for(int i = 0; i < 2; i++)
-			{
-				int neighid = neighbor[IX(x,y)][i];
-				if(neighid != -1)
+				for(int i = 0; i < 3; i++)
 				{
-					//A0.AddNZElt(neighid, -1);
-					A.insert(index, neighid) = -1;
+					int neighid = neighbor[IX(x, y, z)][i];
+					if(neighid != -1)
+					{
+						A.insert(index, neighid) = -1;
+					}
 				}
-			}
-			//A0.AddNZElt(index, neighNum[IX(x, y)]);
-			A.insert(index, index) = neighNoneSolid[IX(x, y)];
-			for(int i = 2; i < 4; i++)
-			{
-				int neighid = neighbor[IX(x,y)][i];
-				if(neighid != -1)
+				A.insert(index, index) = neighNoneSolid[IX(x, y, z)];
+				for(int i = 3; i < 6; i++)
 				{
-					//A0.AddNZElt(neighid, -1);
-					A.insert(index, neighid) = -1;
+					int neighid = neighbor[IX(x, y, z)][i];
+					if(neighid != -1)
+					{
+						A.insert(index, neighid) = -1;
+					}
 				}
+				index ++;
 			}
-			//A0.End();
-			//cout<<A0<<endl;
-			//A0.SetElts(index, neighs, VL_SV_END);
-			//(*A)[index++] = A0;
-			index ++;
-		}
-	//std::cout<<A<<std::endl;
-	//check symmetry
-	//for(int i = 0; i < fluidNum; i++)
-	//	for(int j = i+1; j < fluidNum; j++)
-	//		A.
 	A.makeCompressed();
 	solver.compute(A);
 
 }
 
-float FluidCube3D::getVelosity(int index, float x, float y, float *u)
+float FluidCube3D::getVelosity(int index, float x, float y, float z, float *u)
 {
 	if(index == 1)
 	{
 		y -= 0.5;
+		z -= 0.5;
+	}
+	else if(index == 2)
+	{
+		x -= 0.5;
+		z -= 0.5;
 	}
 	else
 	{
 		x -= 0.5;
+		y -= 0.5;
 	}
 
-	if(x < 0 || x >= _W+1 || y < 0 || y >= _H+1)
+	if(x < 0 || x >= _X+1 || y < 0 || y >= _Y+1 || z < 0 || z >= _Z+1)
 	{
 		std::cout<<"Get velosity out of bound"<<std::endl;
 		REPORT(x);
 		REPORT(y);
+		REPORT(z);
 		//system("pause");
 	}
 	if(x < 0)
 		x = 0;
-	if(x >= _W+1)
-		x = _W+0.999;
+	if(x >= _X+1)
+		x = _X+0.999;
 	if(y < 0)
 		y = 0;
-	if(y >= _H+1)
-		y = _H+0.999;
+	if(y >= _Y+1)
+		y = _Y+0.999;
+	if(z < 0)
+		z = 0;
+	if(z >= _Z+1)
+		z = _Z+0.999;
 
 
 	int i0 = int(x), i1 = i0 + 1;
 	int j0 = int(y), j1 = j0 + 1;
+	int k0 = int(z), k1 = k0 + 1;
 	float s1 = x - i0, s0 = 1 - s1;
 	float t1 = y - j0, t0 = 1 - t1;
+	float r1 = z - k0, r0 = 1 - r1;
 
-	return s0 * (t0*u[IX(i0,j0)] + t1*u[IX(i0,j1)]) +
-		   s1 * (t0*u[IX(i1,j0)] + t1*u[IX(i1,j1)]);
+	float a1 = r0 * u[IX(i0, j0, k0)] + r1 * u[IX(i0, j0, k1)];
+	float a2 = r0 * u[IX(i0, j1, k0)] + r1 * u[IX(i0, j1, k1)];
+	float b1 = r0 * u[IX(i1, j0, k0)] + r1 * u[IX(i1, j0, k1)];
+	float b2 = r0 * u[IX(i1, j1, k0)] + r1 * u[IX(i1, j1, k1)];
+
+	float c1 = t0 * a1 + t1 * a2;
+	float c2 = t0 * b1 + t1 * b2;
+
+	return s0 * c1 + s1 * c2;
 }
 
 Velo FluidCube3D::getVelosity(float x, float y, float z, float *vx, float *vy, float *vz)

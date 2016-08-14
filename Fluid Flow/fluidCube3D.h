@@ -64,7 +64,7 @@ private:
 	float max_vz;
 	
 	//Projection using Conjugate Gradient
-	Eigen::Vector2i dir[6];
+	Eigen::Vector3i dir[6];
 	int fluidNum;
 	int **neighbor;
 	int *neighNoneSolid;

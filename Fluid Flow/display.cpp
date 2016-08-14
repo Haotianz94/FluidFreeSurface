@@ -43,20 +43,19 @@ void initialize(){
 
 #else 
 
-	cube = new FluidCube3D(DIFFUSION, VISCOSITY, TIMESTEP);
+	cube = new FluidCube3D(VISCOSITY, FRAMERATE, MYSCENE, MYRENDER);
 
 	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE |GLUT_RGBA  | GLUT_STENCIL
                       | GLUT_ACCUM);
-	glutInitWindowPosition(100, 100); //initial position of the window on the screen
-	glutInitWindowSize(800, 800);
+	glutInitWindowPosition(10, 10); //initial position of the window on the screen
+	glutInitWindowSize(700, 700);
 	glutCreateWindow("3D Fluid Simulation"); //create a window and set its focus
 
 	glutDisplayFunc(refresh); //infinite loop to draw on the window
-	glutTimerFunc(0, timer, 0);
-	glutReshapeFunc(reshape); //called when the window is resized
+	//glutTimerFunc(0, timer, 0);
+	//glutReshapeFunc(reshape); //called when the window is resized
 	glutKeyboardFunc(keyEvent); //called when a standard key is pressed
 	glutSpecialFunc(specKeyEvent); //called when a special key is pressed (ie. enter);
-
 	srand(time(0));
 
 #endif
@@ -223,7 +222,7 @@ void specKeyEvent(int _key, int _x, int _y){
 	REPORT(px);
 	REPORT(py);
 	REPORT(pz);
-	cube->draw_dens();
+	//cube->render();
 }
 
 #endif
