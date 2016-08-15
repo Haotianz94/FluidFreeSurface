@@ -513,41 +513,6 @@ void FluidCube2D::advect(int b, float *u0, float *u,  bool backward)
 			Pos pos = traceParticle(b, x, y, backward);
 		
 			u[IX(x, y)] = getVelosity(b, pos.x, pos.y, u0);
-
-			/*if(x0 < 0.5)
-				x0 = 0.5;
-			else if(x0 > _W + 0.5)
-				x0 = _W + 0.5;
-
-			if(y0 < 0.5)
-				y0 = 0.5;
-			else if(y0 > _H + 0.5)
-				y0 = _H + 0.5;
-
-			int i0 = int(x0), i1 = i0 + 1;
-			int j0 = int(y0), j1 = j0 + 1;
-			float s1 = x0 - i0, s0 = 1 - s1;
-			float t1 = y0 - j0, t0 = 1 - t1;
-
-			//if trace into solid, up it unchanged
-			int nonFluidNum = 0;
-			if(type[IX(i0, j0)] != FLUID)
-				nonFluidNum ++;
-			if(type[IX(i0, j1)] != FLUID)
-				nonFluidNum ++;
-			if(type[IX(i1, j0)] != FLUID)
-				nonFluidNum ++;
-			if(type[IX(i1, j1)] != FLUID)
-				nonFluidNum ++;
-			if(nonFluidNum >= 3)
-			{
-				u[IX(x,y)] = u0[IX(x,y)];
-				continue;
-			}
-
-			u[IX(x,y)] = s0 * (t0*u0[IX(i0,j0)] + t1*u0[IX(i0,j1)]) +
-						 s1 * (t0*u0[IX(i1,j0)] + t1*u0[IX(i1,j1)]);*/
-
 		}
 }
 
@@ -573,9 +538,15 @@ void FluidCube2D::set_bnd()
 				continue;
 
 			if(type[IX(x-1, y)] == SOLID)
+			{
 				Vx[IX(x, y)] = 0;
+				Vy[IX(x-1, y)] = Vy[IX(x, y)];
+			}
 			if(type[IX(x, y-1)] == SOLID)
+			{
 				Vy[IX(x, y)] = 0;
+				Vx[IX(x, y-1)] = Vx[IX(x, y)];
+			}
 
 			switch(neighAir[IX(x, y)])
 			{
@@ -877,6 +848,7 @@ void FluidCube2D::updateParticles()
 		float x1 = x0 + dt * vx0 * hi;
 		float y1 = y0 + dt * vy0 * hi;
 		//if particle out of boundary??
+		/*
 		if(x1 < 1 || x1 >= _W+1 || y1 < 1 || y1 >= _H+1)
 		{
 			std::cout<<"Particle out of bound"<<std::endl;
@@ -884,6 +856,7 @@ void FluidCube2D::updateParticles()
 			REPORT(y1);
 			//system("pause");
 		}
+		*/
 		if(x1 < 1)
 			x1 = 1;
 		if(x1 >= _W+1)
@@ -905,6 +878,7 @@ void FluidCube2D::updateParticles()
 		x1 = x0 + dt * 0.5 * (vx0 + vx1) * hi;
 		y1 = y0 + dt * 0.5 * (vy0 + vy1) * hi;
 		//if particle out of boundary???
+		/*
 		if(x1 < 1 || x1 >= _W+1 || y1 < 1 || y1 >= _H+1)
 		{
 			std::cout<<"Particle out of bound"<<std::endl;
@@ -912,6 +886,7 @@ void FluidCube2D::updateParticles()
 			REPORT(y1);
 			//system("pause");
 		}
+		*/
 		if(x1 < 1)
 			x1 = 1;
 		if(x1 >= _W+1)
@@ -920,8 +895,8 @@ void FluidCube2D::updateParticles()
 			y1 = 1;
 		if(y1 >= _H+1)
 			y1 = _H+0.999;
-		particles[i].x = x1;
-		particles[i].y = y1;
+		
+		particles[i] = Pos(x1, y1);
 	}
 }
 
@@ -1158,7 +1133,7 @@ float FluidCube2D::getVelosity(int index, float x, float y, float *u)
 	{
 		x -= 0.5;
 	}
-
+	/*
 	if(x < 0 || x >= _W+1 || y < 0 || y >= _H+1)
 	{
 		std::cout<<"Get velosity out of bound"<<std::endl;
@@ -1166,6 +1141,7 @@ float FluidCube2D::getVelosity(int index, float x, float y, float *u)
 		REPORT(y);
 		//system("pause");
 	}
+	*/
 	if(x < 0)
 		x = 0;
 	if(x >= _W+1)

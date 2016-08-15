@@ -3,7 +3,7 @@
 
 #include <iostream>
 
-//#define SIMULATION_2D 1
+#define SIMULATION_2D 1
 //#define OBSTACLE 1
 #define OUTPUT 1
 //#define GAUSS_SEIDEL 1
@@ -19,7 +19,7 @@
 	#define NUMPERGRID 6
 	#define GRAVITY 9.8
 	#define MYSCENE DOUBLEDAM
-	#define MYRENDER FLUIDGRID
+	#define MYRENDER PARTICLE
 
 	#define IX(x, y) ( (x) + (y) * (_W+2) )
 	#define BOUNDED(x, y) ( (type[IX(int(x),int(y))] == SOLID || type[IX(int(x)+1,int(y)+1)] == SOLID)? false : true)

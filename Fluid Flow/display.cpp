@@ -37,6 +37,7 @@ void initialize(){
 	//for the current window, set the callback functions:
 	glutDisplayFunc(refresh); //infinite loop to draw on the window
 	glutTimerFunc(0, timer, 0);
+	glutKeyboardFunc(keyEvent); //called when a standard key is pressed
 	//glutReshapeFunc(reshape); //called when the window is resized
 	//glutMouseFunc(mouseClick); //called when the mouse is clicked in the window
 	//glutMotionFunc(mouseDrag); //called when the mouse is dragged after being clicked
@@ -97,8 +98,6 @@ void reshape(int _w, int _h){
 	PRINT("done - reshape(" <<_w << "," << _h <<")");
 }
 
-#ifdef SIMULATION_2D
-
 int lastx, lasty;
 void mouseClick(int _button, int _state, int _x, int _y){
 	PRINT("mouseClick(" <<_button << "," << _state << "," << _x << "," << _y <<")");
@@ -113,7 +112,6 @@ void mouseClick(int _button, int _state, int _x, int _y){
 		lasty = height -_y;
 	}
 }
-#else
 
 void keyEvent(unsigned char _key, int _x, int _y){
 	
@@ -127,6 +125,8 @@ void keyEvent(unsigned char _key, int _x, int _y){
 		case 'e':
 			pause = !pause;
 			break;
+
+#ifndef SIMULATION_2D
 		case 'x':
 			seita = 0;
 			fai = 0;
@@ -151,10 +151,14 @@ void keyEvent(unsigned char _key, int _x, int _y){
 			py = ll * sinf(seita);
 			pz = ll * cosf(seita) * sinf(fai);
 			break;
+#endif
+
 		default:
 			break;
 	}
 }
+
+#ifndef SIMULATION_2D
 
 void specKeyEvent(int _key, int _x, int _y){
 

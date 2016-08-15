@@ -451,7 +451,7 @@ void FluidCube3D::projectVelosity()
 				else if(type[IX(x-1, y, z)] == FLUID)
 					p1 = p[pos2index[IX(x-1, y, z)]];
 				else
-					p1 = p[pos2index[IX(x, y, z)]];
+					p1 = p2;
 				Vx[IX(x, y, z)] -= (p2 - p1) * hi;
 			
 				//Vy
@@ -460,7 +460,7 @@ void FluidCube3D::projectVelosity()
 				else if(type[IX(x, y-1, z)] == FLUID)
 					p1 = p[pos2index[IX(x, y-1, z)]];
 				else
-					p1 = p[pos2index[IX(x, y, z)]];
+					p1 = p2;
 				Vy[IX(x, y, z)] -= (p2 - p1) * hi;
 
 				//Vz
@@ -469,7 +469,7 @@ void FluidCube3D::projectVelosity()
 				else if(type[IX(x, y, z-1)] == FLUID)
 					p1 = p[pos2index[IX(x, y, z-1)]];
 				else
-					p1 = p[pos2index[IX(x, y, z)]];
+					p1 = p2;
 				Vz[IX(x, y, z)] -= (p2 - p1) * hi;
 
 				if(fabsf(Vx[IX(x, y, z)]) > max_vx)
@@ -571,17 +571,31 @@ void FluidCube3D::set_bnd()
 					continue;
 
 				if(type[IX(x-1, y, z)] == SOLID)
+				{
 					Vx[IX(x, y, z)] = 0;
+					Vy[IX(x-1, y, z)] = Vy[IX(x, y, z)];
+					Vz[IX(x-1, y, z)] = Vz[IX(x, y, z)];
+				}
 				if(type[IX(x, y-1, z)] == SOLID)
+				{
 					Vy[IX(x, y, z)] = 0;
+					Vx[IX(x, y-1, z)] = Vx[IX(x, y, z)];
+					Vz[IX(x, y-1, z)] = Vz[IX(x, y, z)];
+				}
 				if(type[IX(x, y, z-1)] == SOLID)
+				{
 					Vz[IX(x, y, z)] = 0;
+					Vx[IX(x, y, z-1)] = Vx[IX(x, y, z)];
+					Vy[IX(x, y, z-1)] = Vy[IX(x, y, z)];
+				}
 
 				switch(neighAir[IX(x, y, z)])
 				{
-				case 0: 
+				case 0:
+					//full fluid cell
 					break;
 				case 1: 
+					//when only 1 surface-face, solve the div = 0 directly 
 					{
 					if(type[IX(x-1, y, z)] == AIR)
 						Vx[IX(x,y,z)] = Vx[IX(x+1,y,z)] + Vy[IX(x,y+1,z)] - Vy[IX(x,y,z)] + Vz[IX(x,y,z+1)] - Vz[IX(x,y,z)];
@@ -598,6 +612,10 @@ void FluidCube3D::set_bnd()
 					break;
 					}
 				case 2:
+					//when 2 surface-face, two situations:
+					//a. 2 surface-face oppsite, do nothing
+					//b. for surface-face, copy the value from the opposite, and add half of the left 2 difference to 2 surface-face 
+					//totally 12 branches
 					{
 					if(type[IX(x-1, y, z)] == AIR)
 					{
@@ -686,6 +704,9 @@ void FluidCube3D::set_bnd()
 					break;
 					}
 				case 3:
+					//when 3 surface-face, two situations:
+					//a. 3 not oppsite each other, copy the value from the oppsite
+					//b. for 1 surface-face not oppsite, solve it as the case 1
 					{
 					bool tx0 = (type[IX(x-1, y, z)] == AIR && type[IX(x+1, y, z)] != AIR);
 					bool tx1 = (type[IX(x+1, y, z)] == AIR && type[IX(x-1, y, z)] != AIR);
@@ -756,6 +777,9 @@ void FluidCube3D::set_bnd()
 					break;
 					}
 				case 4:
+					//when 4 surface-face, two situations:
+					//a. each 2 opposite, add the quater of the div to each surface-face
+					//b. for 2 opposite non-surface face, solve them as the case 2
 					{
 					if(type[IX(x+1, y, z)] != AIR)
 					{
@@ -871,6 +895,7 @@ void FluidCube3D::set_bnd()
 					break;
 					}
 				case 5:
+					//when 5 surface-face, solve the one opposite non-surface face as the case 1
 					{
 					if(type[IX(x+1, y, z)] != AIR)
 						Vx[IX(x,y,z)] = Vx[IX(x+1,y,z)] + Vy[IX(x,y+1,z)] - Vy[IX(x,y,z)] + Vz[IX(x,y,z+1)] - Vz[IX(x,y,z)];
@@ -887,6 +912,7 @@ void FluidCube3D::set_bnd()
 					break;
 					}
 				case 6:
+					//when 6 surface-face, do nothing
 					break;
 				}
 			}
@@ -1165,15 +1191,15 @@ void FluidCube3D::updateParticles()
 		if(x1 < 1)
 			x1 = 1;
 		if(x1 >= _X+1)
-			x1 = _X+0.999;
+			x1 = _X+0.5;//or 0.999 which is better?
 		if(y1 < 1)
 			y1 = 1;
 		if(y1 >= _Y+1)
-			y1 = _Y+0.999;
+			y1 = _Y+0.5;
 		if(z1 < 1)
 			z1 = 1;
 		if(z1 >= _Z+1)
-			z1 = _Z+0.999;
+			z1 = _Z+0.5;
 
 		if(type[IX(int(x1), int(y1), int(z1))] != FLUID)
 		{
@@ -1197,15 +1223,15 @@ void FluidCube3D::updateParticles()
 		if(x1 < 1)
 			x1 = 1;
 		if(x1 >= _X+1)
-			x1 = _X+0.999;
+			x1 = _X+0.5;
 		if(y1 < 1)
 			y1 = 1;
 		if(y1 >= _Y+1)
-			y1 = _Y+0.999;
+			y1 = _Y+0.5;
 		if(z1 < 1)
 			z1 = 1;
 		if(z1 >= _Z+1)
-			z1 = _Z+0.999;
+			z1 = _Z+0.5;
 
 		particles[i] = Pos(x1, y1, z1);
 	}
@@ -1231,9 +1257,9 @@ void FluidCube3D::updateGrid()
 
 	for(unsigned i = 0; i < particles.size(); i++)
 	{
-		int x = particles[i].x;
-		int y = particles[i].y;
-		int z = particles[i].z;
+		int x = int(particles[i].x);
+		int y = int(particles[i].y);
+		int z = int(particles[i].z);
 		type[IX(x, y, z)] = FLUID;
 		invertedList[IX(x, y, z)]->push_back(i);
 	}
@@ -1278,8 +1304,8 @@ void FluidCube3D::updateGrid()
 				for(unsigned i = 0; i < list->size(); i++)
 				{
 					float x0 = particles[list->at(i)].x;
-					float y0 = particles[list->at(i)].y;
-					float z0 = particles[list->at(i)].z;
+					//float y0 = particles[list->at(i)].y;
+					//float z0 = particles[list->at(i)].z;
 					/*
 					if(DISTANCE(x0, y0, x, y+0.5)< dist)
 					{
@@ -1297,7 +1323,7 @@ void FluidCube3D::updateGrid()
 				for(unsigned i = 0; i < list->size(); i++)
 				{
 					float x0 = particles[list->at(i)].x;
-					float y0 = particles[list->at(i)].y;
+					//float y0 = particles[list->at(i)].y;
 					/*
 					if(DISTANCE(x0, y0, x, y+0.5) < dist)
 					{
@@ -1318,7 +1344,7 @@ void FluidCube3D::updateGrid()
 				list = invertedList[IX(x, y, z)];
 				for(unsigned i = 0; i < list->size(); i++)
 				{
-					float x0 = particles[list->at(i)].x;
+					//float x0 = particles[list->at(i)].x;
 					float y0 = particles[list->at(i)].y;
 					/*
 					if(DISTANCE(x0, y0, x+0.5, y) < dist)
@@ -1336,7 +1362,7 @@ void FluidCube3D::updateGrid()
 				list = invertedList[IX(x, y-1, z)];
 				for(unsigned i = 0; i < list->size(); i++)
 				{
-					float x0 = particles[list->at(i)].x;
+					//float x0 = particles[list->at(i)].x;
 					float y0 = particles[list->at(i)].y;
 					/*
 					if(DISTANCE(x0, y0, x+0.5, y) < dist)
@@ -1358,8 +1384,8 @@ void FluidCube3D::updateGrid()
 				list = invertedList[IX(x, y, z)];
 				for(unsigned i = 0; i < list->size(); i++)
 				{
-					float x0 = particles[list->at(i)].x;
-					float y0 = particles[list->at(i)].y;
+					//float x0 = particles[list->at(i)].x;
+					//float y0 = particles[list->at(i)].y;
 					float z0 = particles[list->at(i)].z;
 					/*
 					if(DISTANCE(x0, y0, x+0.5, y) < dist)
@@ -1377,8 +1403,8 @@ void FluidCube3D::updateGrid()
 				list = invertedList[IX(x, y, z-1)];
 				for(unsigned i = 0; i < list->size(); i++)
 				{
-					float x0 = particles[list->at(i)].x;
-					float y0 = particles[list->at(i)].y;
+					//float x0 = particles[list->at(i)].x;
+					//float y0 = particles[list->at(i)].y;
 					float z0 = particles[list->at(i)].z;
 					/*
 					if(DISTANCE(x0, y0, x+0.5, y) < dist)
@@ -1436,20 +1462,20 @@ void FluidCube3D::updateGrid()
 
 float FluidCube3D::getVelosity(int index, float x, float y, float z, float *u)
 {
-	if(index == 1)
+	switch(index)
 	{
+	case 1:
 		y -= 0.5;
 		z -= 0.5;
-	}
-	else if(index == 2)
-	{
+		break;
+	case 2:
 		x -= 0.5;
 		z -= 0.5;
-	}
-	else
-	{
+		break;
+	case 3:
 		x -= 0.5;
 		y -= 0.5;
+		break;
 	}
 
 	if(x < 0 || x >= _X+1 || y < 0 || y >= _Y+1 || z < 0 || z >= _Z+1)
