@@ -26,7 +26,8 @@ enum SCENETYPE
 	CUBEFALL,
 	SPHEREFALL,
 	CONTAINER,
-	DAMBREAK
+	DAMBREAK,
+	DOUBLEDAM
 };
 
 enum RENDERTYPE
@@ -58,10 +59,12 @@ private:
 	std::vector<Pos> obstacle;
 	float max_vx;
 	float max_vy;
+	float max_p;
 	
 	//Projection using Conjugate Gradient
 	Eigen::Vector2i dir[4];
 	int fluidNum;
+	int originFluid;
 	int **neighbor;
 	int *neighNoneSolid;
 	int *neighAir;
@@ -81,6 +84,8 @@ private:
 	
 	SCENETYPE scene;
 	RENDERTYPE renderType;
+	float totalTime;
+	int iteration;
 	float ctime;
 	float frameTime;
 
@@ -110,6 +115,7 @@ private:
 	void draw_velo(int i, int j, float vx, float vy);
 
 	void output(float *u);
+	void report();
 
 public:
 	FluidCube2D(float viscosity, float fr, SCENETYPE sc = CONTAINER, RENDERTYPE rt = PARTICLE);

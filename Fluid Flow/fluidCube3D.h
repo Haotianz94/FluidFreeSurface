@@ -62,9 +62,11 @@ private:
 	float max_vx;
 	float max_vy;
 	float max_vz;
+	float max_p;
 	
 	//Projection using Conjugate Gradient
 	Eigen::Vector3i dir[6];
+	int originFluid;
 	int fluidNum;
 	int **neighbor;
 	int *neighNoneSolid;
@@ -85,6 +87,8 @@ private:
 	
 	SCENETYPE scene;
 	RENDERTYPE renderType;
+	float totalTime;
+	int iteration;
 	float ctime;
 	float frameTime;
 
@@ -114,6 +118,7 @@ private:
 	//void draw_velo(int i, int j, float vx, float vy);
 
 	void output(float *u);
+	void report();
 
 public:
 	FluidCube3D(float viscosity, float fr, SCENETYPE sc = CONTAINER, RENDERTYPE rt = PARTICLE);

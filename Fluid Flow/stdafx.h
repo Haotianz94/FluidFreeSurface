@@ -4,7 +4,6 @@
 #include <iostream>
 
 //#define SIMULATION_2D 1
-//#define CONNECTED 1
 //#define OBSTACLE 1
 #define OUTPUT 1
 //#define GAUSS_SEIDEL 1
@@ -16,11 +15,11 @@
  	#define GRIDSIZE 10
 	#define VISCOSITY 0.0001
 	#define ITERATION 30
-	#define FRAMERATE 32
+	#define FRAMERATE 200
 	#define NUMPERGRID 6
 	#define GRAVITY 9.8
-	#define MYSCENE CONTAINER
-	#define MYRENDER PARTICLE
+	#define MYSCENE DOUBLEDAM
+	#define MYRENDER FLUIDGRID
 
 	#define IX(x, y) ( (x) + (y) * (_W+2) )
 	#define BOUNDED(x, y) ( (type[IX(int(x),int(y))] == SOLID || type[IX(int(x)+1,int(y)+1)] == SOLID)? false : true)
@@ -35,9 +34,9 @@
 	#define VISCOSITY 0.00001
 	#define ITERATION 30
 	#define FRAMERATE 32
-	#define NUMPERGRID 6
+	#define NUMPERGRID 10
 	#define GRAVITY 9.8
-	#define MYSCENE CUBEFALL
+	#define MYSCENE DAMBREAK
 	#define MYRENDER PARTICLE
 
 	#define IX(x, y, z) ((x) + (y)*(_X+2) + (z)*(_X+2)*(_Y+2) )

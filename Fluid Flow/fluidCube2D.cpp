@@ -17,9 +17,12 @@ FluidCube2D::FluidCube2D(float viscosity, float fr, SCENETYPE sc, RENDERTYPE rt)
 	scene = sc;
 	renderType = rt;
 	ctime = 0;
+	totalTime = 0;
+	iteration = 0;
 
 	max_vx = 0;
 	max_vy = 0;
+	max_p = 0;
 
 	Vx = new float [size]; 
 	Vy = new float [size]; 
@@ -61,14 +64,21 @@ FluidCube2D::FluidCube2D(float viscosity, float fr, SCENETYPE sc, RENDERTYPE rt)
 
 	//init fluid
 	//cube fall
-	if(scene == CUBEFALL)
+	originFluid = 0;
+	switch(scene)
+	{
+	case CUBEFALL:
 	{
 		for(int y = _H/4.0; y <= _H/2.0; y++)
 			for(int x = _W/3.0; x <= _W/3.0*2; x++)
+			{
+				originFluid ++;
 				fillParticleInGrid(x, y);
+			}
+		break;
 	}
 	//sphere fall
-	else if(scene == SPHEREFALL)
+	case SPHEREFALL:
 	{
 		int cx = _W/2;
 		int cy = _H/2;
@@ -76,28 +86,62 @@ FluidCube2D::FluidCube2D(float viscosity, float fr, SCENETYPE sc, RENDERTYPE rt)
 		for(int y = 1; y <= _H; y++)
 			for(int x = 1; x <= _W; x++)
 				if(DISTANCE(x, y, cx, cy) <= R)
+				{
+					originFluid ++;
 					fillParticleInGrid(x, y);
+				}
+		break;
 	}
 	//contain bottom
-	else if(scene == CONTAINER)
+	case CONTAINER:
 	{
 		
 		for(int y = _H/3.0; y <= _H/2.0; y++)
 			for(int x = _W/3.0; x <= _W/3.0*2; x++)
+			{
+				originFluid ++;
 				fillParticleInGrid(x, y);
-		
+			}
 
 		for(int y = 1; y <= _H/4.0; y++)
 			for(int x = 1; x <= _W; x++)
+			{
+				originFluid ++;
 				fillParticleInGrid(x, y);
+			}
+		break;
 	}
 	//dam break
-	else if(scene == DAMBREAK)
+	case DAMBREAK:
 	{
 		for(int y = 1; y <= _H/3.0*2; y++)
 			for(int x = 1; x <= _W/4.0; x++)
+			{
+				originFluid ++;
 				fillParticleInGrid(x, y);
+			}
+		break;
 	}
+	case DOUBLEDAM:
+	{
+		for(int y = 1; y <= _H/3.0*2; y++)
+			for(int x = 1; x <= _W/4.0; x++)
+			{
+				originFluid ++;
+				fillParticleInGrid(x, y);
+			}	
+
+		for(int y = 1; y <= _H/3.0*2+8; y++)
+			for(int x = _W/4.0*3; x <= _W; x++)
+			{
+				originFluid ++;
+				fillParticleInGrid(x, y);
+			}
+		break;
+	}
+
+	}
+
 
 #ifdef OBSTACLE
 	int cx = _W / 2.0;
@@ -367,6 +411,11 @@ void FluidCube2D::projectVelosity()
 	}
 	*/
 
+	float max_p = -9999;
+	for(int i = 0; i < fluidNum; i++)
+		if(p[i] > max_p)
+			max_p = p[i];
+
 	for(int y = 1; y <= _H; y++)
 		for(int x = 1; x <= _W; x++)
 		{
@@ -589,8 +638,8 @@ void FluidCube2D::set_bnd()
 
 void FluidCube2D::simulate()
 {	
-	while(true)
-	{
+	//while(true)
+	//{
 		bool draw = calculateTimeStep();
 	
 		updateParticles();
@@ -603,7 +652,9 @@ void FluidCube2D::simulate()
 
 		if(draw)
 			render();
-	}
+
+		report();
+	//}
 }
 
 void FluidCube2D::output(float *u)
@@ -648,16 +699,6 @@ void FluidCube2D::render()
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glEnable(GL_POINT_SMOOTH);
 	glEnable(GL_LINE_SMOOTH);
-
-	REPORT(max_vx);
-	REPORT(max_vy);
-
-	float max_p = -9999;
-	for(int i = 0; i < fluidNum; i++)
-		if(p[i] > max_p)
-			max_p = p[i];
-	REPORT(max_p);
-	REPORT(fluidNum);
 
 	//calculate divergence
 	if(renderType == DIVERGENCE)
@@ -793,6 +834,8 @@ void FluidCube2D::draw_velo(int i, int j, float vx, float vy)
 
 bool FluidCube2D::calculateTimeStep()
 {
+	iteration ++;
+
 	float max_v;
 	if(max_vx > max_vy)
 		max_v = max_vx;
@@ -804,20 +847,19 @@ bool FluidCube2D::calculateTimeStep()
 		dt = h / max_v;
 	//if(dt > frameTime)
 	
-	//dt = frameTime;
-	//return true;
+	totalTime += dt;
+	dt = frameTime;
+	return true;
 
 	if(ctime + dt >= frameTime)
 	{
 		dt = frameTime - ctime;
 		ctime = 0;
-		REPORT(dt);
 		return true;
 	}
 	else
 	{
 		ctime += dt;
-		REPORT(dt);
 		return false;
 	}
 	//if(dt > h2 /(6*visc))
@@ -1189,6 +1231,22 @@ void FluidCube2D::fillParticleInGrid(int x, int y)
 	for(int i = 0; i < nump; i++)
 		for(int j = 0; j < nump; j++)
 			particles.push_back(Pos((x+step*i), (y+step*j)));
+}
+
+void FluidCube2D::report()
+{
+	REPORT(iteration);
+	REPORT(dt);
+
+	REPORT(max_vx);
+	REPORT(max_vy);
+	REPORT(max_p);
+	float fluidShrink = 1.0 * fluidNum / originFluid;
+	REPORT(fluidShrink);
+
+	REPORT(totalTime);
+	PRINT("======================================");
+	PRINT("");
 }
 
 #endif

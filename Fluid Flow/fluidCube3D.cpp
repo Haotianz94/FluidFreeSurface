@@ -21,10 +21,13 @@ FluidCube3D::FluidCube3D(float viscosity, float fr, SCENETYPE sc, RENDERTYPE rt)
 	scene = sc;
 	renderType = rt;
 	ctime = 0;
+	totalTime = 0;
+	iteration = 0;
 
 	max_vx = 0;
 	max_vy = 0;
 	max_vz = 0;
+	max_p = 0;
 
 	Vx = new float [size]; 
 	Vy = new float [size]; 
@@ -71,15 +74,22 @@ FluidCube3D::FluidCube3D(float viscosity, float fr, SCENETYPE sc, RENDERTYPE rt)
 
 	//init fluid
 	//cube fall
-	if(scene == CUBEFALL)
+	originFluid = 0;
+	switch(scene)
+	{
+	case CUBEFALL:
 	{
 		for(int z = _Z/3.0; z <= _Z/3.0*2; z++)
 			for(int y = _Y/4.0; y <= _Y/2.0; y++)
 				for(int x = _X/3.0; x <= _X/3.0*2; x++)
+				{
+					originFluid ++;
 					fillParticleInGrid(x, y, z);
+				}
+		break;
 	}
 	//sphere fall
-	else if(scene == SPHEREFALL)
+	case SPHEREFALL:
 	{
 		int cx = _X/2;
 		int cy = _Y/2;
@@ -89,28 +99,46 @@ FluidCube3D::FluidCube3D(float viscosity, float fr, SCENETYPE sc, RENDERTYPE rt)
 			for(int y = 1; y <= _Y; y++)
 				for(int x = 1; x <= _X; x++)
 					if(DISTANCE(x, y, z, cx, cy, cz) <= R)
+					{
+						originFluid ++;
 						fillParticleInGrid(x, y, z);
+					}
+		break;
 	}
 	//contain bottom
-	else if(scene == CONTAINER)
+	case CONTAINER:
 	{
+		/*
 		for(int z = _Z*3.0; z <= _Z*3.0/2; z++)
 			for(int y = _Y/2.0; y <= _Y/3.0; y++)
 				for(int x = _X/3.0; x <= _X/3.0*2; x++)
+				{
+					originFluid ++;
 					fillParticleInGrid(x, y, z);
+				}
+		*/
 
 		for(int z = 1; z <= _Z; z++)
 			for(int y = 1; y <= _Y/4.0; y++)
 				for(int x = 1; x <= _X; x++)
+				{
+					originFluid ++;
 					fillParticleInGrid(x, y, z);
+				}
+		break;
 	}
 	//dam break
-	else if(scene == DAMBREAK)
+	case DAMBREAK:
 	{
 		for(int z = 1; z <= _Z/4.0*3; z++)
 			for(int y = 1; y <= _Y/3.0*2; y++)
 				for(int x = 1; x <= _X/4.0; x++)
+				{
+					originFluid ++;
 					fillParticleInGrid(x, y, z);
+				}
+		break;
+	}
 	}
 
 #ifdef OBSTACLE
@@ -402,6 +430,11 @@ void FluidCube3D::projectVelosity()
 		}
 	}
 	*/
+
+	max_p = -9999;
+	for(int i = 0; i < fluidNum; i++)
+		if(p[i] > max_p)
+			max_p = p[i];
 
 	for(int z = 1; z <= _Z; z++)
 		for(int y = 1; y <= _Y; y++)
@@ -875,6 +908,8 @@ void FluidCube3D::simulate()
 
 		if(draw)
 			render();
+
+		report();
 	//}
 }
 
@@ -898,7 +933,7 @@ void FluidCube3D::render()
 	glMatrixMode(GL_MODELVIEW);
 	// Reset transformations
 	glLoadIdentity();
-	glScalef(0.002f, 0.002f, 0.002f);
+	glScalef(0.02f, 0.02f, 0.02f);
 
 	// Set the camera
 	gluLookAt(	px, py, pz,
@@ -913,17 +948,6 @@ void FluidCube3D::render()
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glEnable(GL_POINT_SMOOTH);
 	glEnable(GL_LINE_SMOOTH);
-
-	REPORT(max_vx);
-	REPORT(max_vy);
-	REPORT(max_vz);
-
-	float max_p = -9999;
-	for(int i = 0; i < fluidNum; i++)
-		if(p[i] > max_p)
-			max_p = p[i];
-	REPORT(max_p);
-	REPORT(fluidNum);
 
 	//calculate divergence
 	if(renderType == DIVERGENCE)
@@ -951,8 +975,6 @@ void FluidCube3D::render()
 				float color;
 				if(type[IX(x, y, z)] == SOLID)
 					glColor3f(0, 0.7, 0);
-				else if(renderType == PARTICLE)
-					continue;
 				else if(type[IX(x, y, z)] == FLUID)
 				{
 					switch(renderType)
@@ -980,6 +1002,9 @@ void FluidCube3D::render()
 							glColor3f(1, 0, 0);
 						else
 							glColor3f(0, 0, 0.7);
+						break;
+					case PARTICLE:
+						continue;
 						break;
 					default:
 						glColor3f(0, 0, 0.7);
@@ -1078,6 +1103,8 @@ void FluidCube3D::render()
 
 bool FluidCube3D::calculateTimeStep()
 {
+	iteration ++;
+
 	float max_v;
 	if(max_vx > max_vy)
 		if(max_vx > max_vz)
@@ -1096,6 +1123,8 @@ bool FluidCube3D::calculateTimeStep()
 		dt = h / max_v;
 	if(dt > frameTime)
 		dt = frameTime;
+
+	totalTime += dt;
 	return true;
 
 	if(ctime + dt >= frameTime)
@@ -1109,7 +1138,6 @@ bool FluidCube3D::calculateTimeStep()
 		ctime += dt;
 		return false;
 	}
-	REPORT(dt);
 	//if(dt > h2 /(6*visc))
 }
 
@@ -1524,4 +1552,20 @@ void FluidCube3D::fillParticleInGrid(int x, int y, int z)
 				particles.push_back(Pos((x+step*i), (y+step*j), (z+step*k)));
 }
 
+void FluidCube3D::report()
+{
+	REPORT(iteration);
+	REPORT(dt);
+
+	REPORT(max_vx);
+	REPORT(max_vy);
+	REPORT(max_vz);
+	REPORT(max_p);
+	float fluidShrink = 1.0 * fluidNum / originFluid;
+	REPORT(fluidShrink);
+
+	REPORT(totalTime);
+	PRINT("======================================");
+	PRINT("");
+}
 #endif

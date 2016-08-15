@@ -10,12 +10,11 @@
 #else
 #include "fluidCube3D.h"
 	FluidCube3D *cube;
-float ll = 200;
-float seita = 0, fai = 0;
-float px = ll, py = 0, pz = 0;
-float dx = cosf(seita) * cosf(fai);
-float dy = sinf(seita);
-float dz = cosf(seita) * sinf(fai);
+
+float ll = 2*LENGTH, seita = 0, fai = 0;
+float px = ll * cosf(seita) * cosf(fai);
+float py = ll * sinf(seita);
+float pz = ll * cosf(seita) * sinf(fai);
 #endif
 
 int wide, height;
@@ -36,7 +35,7 @@ void initialize(){
 
 	//for the current window, set the callback functions:
 	glutDisplayFunc(refresh); //infinite loop to draw on the window
-	//glutTimerFunc(0, timer, 0);
+	glutTimerFunc(0, timer, 0);
 	//glutReshapeFunc(reshape); //called when the window is resized
 	//glutMouseFunc(mouseClick); //called when the mouse is clicked in the window
 	//glutMotionFunc(mouseDrag); //called when the mouse is dragged after being clicked
@@ -53,9 +52,10 @@ void initialize(){
 
 	glutDisplayFunc(refresh); //infinite loop to draw on the window
 	glutTimerFunc(0, timer, 0);
-	//glutReshapeFunc(reshape); //called when the window is resized
+	glutReshapeFunc(reshape); //called when the window is resized
 	glutKeyboardFunc(keyEvent); //called when a standard key is pressed
 	glutSpecialFunc(specKeyEvent); //called when a special key is pressed (ie. enter);
+	
 	srand(time(0));
 
 #endif
@@ -130,9 +130,6 @@ void keyEvent(unsigned char _key, int _x, int _y){
 			px = ll * cosf(seita) * cosf(fai);
 			py = ll * sinf(seita);
 			pz = ll * cosf(seita) * sinf(fai);
-			dx = cosf(seita) * cosf(fai);
-			dy = sinf(seita);
-			dz = cosf(seita) * sinf(fai);
 			break;
 		case 'y':
 			seita = PI / 2;
@@ -141,9 +138,6 @@ void keyEvent(unsigned char _key, int _x, int _y){
 			px = ll * cosf(seita) * cosf(fai);
 			py = ll * sinf(seita);
 			pz = ll * cosf(seita) * sinf(fai);
-			dx = cosf(seita) * cosf(fai);
-			dy = sinf(seita);
-			dz = cosf(seita) * sinf(fai);
 			break;
 		case 'z':
 			seita = 0; 
@@ -152,9 +146,6 @@ void keyEvent(unsigned char _key, int _x, int _y){
 			px = ll * cosf(seita) * cosf(fai);
 			py = ll * sinf(seita);
 			pz = ll * cosf(seita) * sinf(fai);
-			dx = cosf(seita) * cosf(fai);
-			dy = sinf(seita);
-			dz = cosf(seita) * sinf(fai);
 			break;
 		default:
 			break;
@@ -173,55 +164,43 @@ void specKeyEvent(int _key, int _x, int _y){
 			px = ll * cosf(seita) * cosf(fai);
 			py = ll * sinf(seita);
 			pz = ll * cosf(seita) * sinf(fai);
-			dx = cosf(seita) * cosf(fai);
-			dy = sinf(seita);
-			dz = cosf(seita) * sinf(fai);
 			break;
 		case GLUT_KEY_RIGHT:
 			fai += 0.01f;
 			px = ll * cosf(seita) * cosf(fai);
 			py = ll * sinf(seita);
 			pz = ll * cosf(seita) * sinf(fai);
-			dx = cosf(seita) * cosf(fai);
-			dy = sinf(seita);
-			dz = cosf(seita) * sinf(fai);
 			break;
 		case GLUT_KEY_UP:
 			seita += 0.01f;
 			px = ll * cosf(seita) * cosf(fai);
 			py = ll * sinf(seita);
 			pz = ll * cosf(seita) * sinf(fai);
-			dx = cosf(seita) * cosf(fai);
-			dy = sinf(seita);
-			dz = cosf(seita) * sinf(fai);
 			break;
 		case GLUT_KEY_DOWN:
 			seita -= 0.01f;
 			px = ll * cosf(seita) * cosf(fai);
 			py = ll * sinf(seita);
 			pz = ll * cosf(seita) * sinf(fai);
-			dx = cosf(seita) * cosf(fai);
-			dy = sinf(seita);
-			dz = cosf(seita) * sinf(fai);
 			break;
 		case GLUT_KEY_PAGE_UP:
-			px -= dx * fraction;
-			py -= dy * fraction;
-			pz -= dz * fraction;
 			ll -= fraction;
+			px = ll * cosf(seita) * cosf(fai);
+			py = ll * sinf(seita);
+			pz = ll * cosf(seita) * sinf(fai);
 			break;
 		case GLUT_KEY_PAGE_DOWN:
-			px += dx * fraction;
-			py += dy * fraction;
-			pz += dz * fraction;
 			ll += fraction;
+			px = ll * cosf(seita) * cosf(fai);
+			py = ll * sinf(seita);
+			pz = ll * cosf(seita) * sinf(fai);
 			break;
 		default:
 			break;
 	}
-	REPORT(px);
-	REPORT(py);
-	REPORT(pz);
+	REPORT(ll);
+	REPORT(seita);
+	REPORT(fai);
 	//cube->render();
 }
 
@@ -244,6 +223,6 @@ void refresh(){
 
 void timer(int value) {	
 
-	glutPostRedisplay();
-	glutTimerFunc(1000/FRAMERATE, timer, 0); // next timer call milliseconds later
+	cube->simulate();
+	glutTimerFunc(1, timer, 0); // next timer call milliseconds later
 }
