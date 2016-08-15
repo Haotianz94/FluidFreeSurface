@@ -130,9 +130,9 @@ FluidCube3D::FluidCube3D(float viscosity, float fr, SCENETYPE sc, RENDERTYPE rt)
 	//dam break
 	case DAMBREAK:
 	{
-		for(int z = 1; z <= _Z/4.0*3; z++)
+		for(int z = 1; z <= _Z/4.0; z++)
 			for(int y = 1; y <= _Y/3.0*2; y++)
-				for(int x = 1; x <= _X/4.0; x++)
+				for(int x = 1; x <= _X; x++)
 				{
 					originFluid ++;
 					fillParticleInGrid(x, y, z);
@@ -239,7 +239,7 @@ void FluidCube3D::vel_step()
 	projectVelosity();
 	set_bnd();
 
-	errorRemove();
+	//errorRemove();
 }
 
 void FluidCube3D::addForce()
@@ -1160,7 +1160,7 @@ void FluidCube3D::updateParticles()
 			REPORT(x1);
 			REPORT(y1);
 			REPORT(z1);
-			//system("pause");
+			system("pause");
 		}
 		if(x1 < 1)
 			x1 = 1;
@@ -1192,7 +1192,7 @@ void FluidCube3D::updateParticles()
 			REPORT(x1);
 			REPORT(y1);
 			REPORT(z1);
-			//system("pause");
+			system("pause");
 		}
 		if(x1 < 1)
 			x1 = 1;

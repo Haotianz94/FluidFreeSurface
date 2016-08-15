@@ -111,7 +111,6 @@ private:
 	void swap(float *x0, float *x);
 	void set_bnd();
 
-	void render();
 	void draw_velo(int i, int j, float vx, float vy);
 
 	void output(float *u);
@@ -121,7 +120,7 @@ public:
 	FluidCube2D(float viscosity, float fr, SCENETYPE sc = CONTAINER, RENDERTYPE rt = PARTICLE);
 	~FluidCube2D();
 	void simulate();
-	void setScene(SCENETYPE sc) { scene = sc; }
+	void render();
 };
 
 #endif

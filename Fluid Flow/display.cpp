@@ -18,6 +18,7 @@ float pz = ll * cosf(seita) * sinf(fai);
 #endif
 
 int wide, height;
+bool pause = false;
 
 void initialize(){
 
@@ -123,6 +124,9 @@ void keyEvent(unsigned char _key, int _x, int _y){
 		case 27:  // ESC
 			exit(0);
 			break;
+		case 'e':
+			pause = !pause;
+			break;
 		case 'x':
 			seita = 0;
 			fai = 0;
@@ -223,6 +227,9 @@ void refresh(){
 
 void timer(int value) {	
 
-	cube->simulate();
+	if(!pause)
+		cube->simulate();
+	else
+		cube->render();
 	glutTimerFunc(1, timer, 0); // next timer call milliseconds later
 }

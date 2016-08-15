@@ -33,8 +33,8 @@
 	#define GRIDSIZE 40
 	#define VISCOSITY 0.00001
 	#define ITERATION 30
-	#define FRAMERATE 32
-	#define NUMPERGRID 10
+	#define FRAMERATE 100
+	#define NUMPERGRID 6
 	#define GRAVITY 9.8
 	#define MYSCENE DAMBREAK
 	#define MYRENDER PARTICLE
