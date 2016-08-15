@@ -96,14 +96,6 @@ FluidCube2D::FluidCube2D(float viscosity, float fr, SCENETYPE sc, RENDERTYPE rt)
 	//contain bottom
 	case CONTAINER:
 	{
-		
-		for(int y = _H/3.0; y <= _H/2.0; y++)
-			for(int x = _W/3.0; x <= _W/3.0*2; x++)
-			{
-				originFluid ++;
-				fillParticleInGrid(x, y);
-			}
-
 		for(int y = 1; y <= _H/4.0; y++)
 			for(int x = 1; x <= _W; x++)
 			{
@@ -140,7 +132,8 @@ FluidCube2D::FluidCube2D(float viscosity, float fr, SCENETYPE sc, RENDERTYPE rt)
 			}
 		break;
 	}
-
+	case EMPTY:
+		break;
 	}
 
 
@@ -367,49 +360,6 @@ void FluidCube2D::projectVelosity()
 
 	p.resize(fluidNum);
 	p = solver.solve(b);
-	
-	//for(int i = 100; i < 110; i++)
-	//	cout<<p[i]<<' ';
-	//cout<<endl;
-	/*
-	std::cout<<"bbbbbbb"<<std::endl;
-	for(int y = 1; y <= _H; y++)
-		for(int x = 1; x <= _W; x++)
-		{
-			if(type[IX(x, y)] != FLUID)
-				continue;
-
-			std::cout<<b[pos2index[IX(x,y)]]<<std::endl;
-			if(x == _W)
-				std::cout<<std::endl;
-		}
-	
-	std::cout<<"ppppppp"<<std::endl;
-	for(int y = 1; y <= _H; y++)
-	{
-		float lastp = -1;
-		for(int x = 1; x <= _W; x++)
-		{
-			if(type[IX(x, y)] != FLUID)
-				continue;
-
-			//std::cout<<p[pos2index[IX(x,10)]]<<std::endl;
-			//if(x == _W)
-				//std::cout<<std::endl;
-			float curp = p[pos2index[IX(x,y)]];
-			if(x == 1)
-				lastp = curp;
-			else
-			{
-				if(curp != lastp)
-				{
-					std::cout<<x<<' '<<y<<' '<<lastp<<' '<<curp<<std::endl;
-					lastp = curp;
-				}
-			}
-		}
-	}
-	*/
 
 	float max_p = -9999;
 	for(int i = 0; i < fluidNum; i++)
@@ -429,7 +379,7 @@ void FluidCube2D::projectVelosity()
 				p1 = 0;
 			else if(type[IX(x-1, y)] == FLUID)
 				p1 = p[pos2index[IX(x-1,y)]];
-			else
+			else//solid and flowin
 				p1 = p[pos2index[IX(x,y)]];
 			Vx[IX(x, y)] -= (p2 - p1) * hi;
 			
@@ -622,7 +572,11 @@ void FluidCube2D::simulate()
 	//while(true)
 	//{
 		bool draw = calculateTimeStep();
-	
+
+#ifdef FLOW_IN
+		addFlowIn();
+#endif
+
 		updateParticles();
 	
 		updateGrid();
@@ -702,7 +656,8 @@ void FluidCube2D::render()
 
 			if(type[IX(x, y)] == SOLID)
 				glColor3f(0, 0.5, 0);
-			
+			else if(type[IX(x, y)] == FLOWIN)
+				glColor3f(0, 0, 0.7);
 			else if(type[IX(x, y)] == FLUID)
 			{
 				switch(renderType)
@@ -878,6 +833,7 @@ void FluidCube2D::updateParticles()
 		if(type[IX(int(x1), int(y1))] == AIR)
 		{
 			particles[i] = Pos(x1, y1);
+			velosities[i] = Velo(vx0, vy0);
 			continue;
 		}
 		else if(type[IX(int(x1), int(y1))] == SOLID)
@@ -932,6 +888,7 @@ void FluidCube2D::updateParticles()
 		}
 
 		particles[i] = Pos(x1, y1);
+		velosities[i] = Velo((vx0+vx1)*0.5, (vy0+vy1)*0.5);
 	}
 }
 
@@ -945,7 +902,7 @@ void FluidCube2D::updateGrid()
 	for(int y = 1; y <= _H; y++)
 		for(int x = 1; x <= _W; x++)
 		{
-			if(type0[IX(x, y)] != SOLID)
+			if(type0[IX(x, y)] == AIR || type0[IX(x, y)] == FLUID)
 			{
 				type[IX(x, y)] = AIR;
 				invertedList[IX(x, y)]->clear();
@@ -980,7 +937,7 @@ void FluidCube2D::updateGrid()
 					int xx = x+dir[i][0];
 					int yy = y+dir[i][1];
 					neighbor[IX(x,y)][i] = pos2index[IX(xx, yy)];
-					if(type[IX(xx,yy)] != SOLID)
+					if(type[IX(xx,yy)] == AIR || type[IX(xx,yy)] == FLUID)
 						neighNoneSolid[IX(x, y)] ++;
 					if(type[IX(xx,yy)] == AIR)
 						neighAir[IX(x, y)] ++;
@@ -992,8 +949,8 @@ void FluidCube2D::updateGrid()
 
 			if(type0[IX(x, y)] == AIR && type[IX(x, y)] == FLUID)
 			{
-				float vx = 0, vy = 0;
-				int nx = 0, ny = 0;
+				float vsum = 0;
+				int nsum = 0;
 				float dist = 100;
 				int pid = -1;
 				//Vx
@@ -1004,8 +961,8 @@ void FluidCube2D::updateGrid()
 					float y0 = particles[list->at(i)].y;
 					if( x0 <= x + 0.5)
 					{
-						nx ++;
-						vx += getVelosity(1, x0, y0, Vx);
+						nsum ++;
+						vsum += velosities[list->at(i)].x;
 					}
 					/*
 					if(DISTANCE(x0, y0, x, y+0.5)< dist)
@@ -1027,8 +984,8 @@ void FluidCube2D::updateGrid()
 					float y0 = particles[list->at(i)].y;
 					if(x0 >= x - 0.5)
 					{
-						nx ++;
-						vx += getVelosity(1, x0, y0, Vx);
+						nsum ++;
+						vsum += velosities[list->at(i)].x;
 					}
 					/*
 					if(DISTANCE(x0, y0, x, y+0.5) < dist)
@@ -1043,15 +1000,17 @@ void FluidCube2D::updateGrid()
 						pid = list->at(i);
 					}
 				}
-				//if(nx > 0)
-				//	Vx[IX(x, y)] = vx / nx;
-				//else
+				if(nsum > 0)
+					Vx[IX(x, y)] = vsum / nsum;
+				else
 				{
 					//for simple only take the nearest particle in the cell
-					Vx[IX(x, y)] = getVelosity(1, particles[pid].x, particles[pid].y, Vx);
+					Vx[IX(x, y)] = velosities[pid].x;
 				}
 
 				dist = 100;
+				vsum = 0;
+				nsum = 0;
 				//Vy
 				list = invertedList[IX(x, y)];
 				for(unsigned i = 0; i < list->size(); i++)
@@ -1060,8 +1019,8 @@ void FluidCube2D::updateGrid()
 					float y0 = particles[list->at(i)].y;
 					if( y0 <= y + 0.5)
 					{
-						ny ++;
-						vy += getVelosity(2, x0, y0, Vy);
+						nsum ++;
+						vsum += velosities[list->at(i)].y;
 					}
 					/*
 					if(DISTANCE(x0, y0, x+0.5, y) < dist)
@@ -1083,8 +1042,8 @@ void FluidCube2D::updateGrid()
 					float y0 = particles[list->at(i)].y;
 					if(y0 >= y - 0.5)
 					{
-						ny ++;
-						vy += getVelosity(2, x0, y0, Vy);
+						nsum ++;
+						vsum += velosities[list->at(i)].y;
 					}
 					/*
 					if(DISTANCE(x0, y0, x+0.5, y) < dist)
@@ -1099,12 +1058,12 @@ void FluidCube2D::updateGrid()
 						pid = list->at(i);
 					}
 				}
-				//if(ny > 0)
-				//	Vy[IX(x, y)] = vy / ny;
-				//else
+				if(nsum > 0)
+					Vy[IX(x, y)] = vsum / nsum;
+				else
 				{
 					//for simple only take the nearest particle in the cell
-					Vy[IX(x, y)] = getVelosity(2, particles[pid].x, particles[pid].y, Vy);
+					Vy[IX(x, y)] = velosities[pid].y;
 				}
 			}
 		}
@@ -1241,7 +1200,10 @@ void FluidCube2D::fillParticleInGrid(int x, int y)
 	float step = 1.0 / nump;
 	for(int i = 0; i < nump; i++)
 		for(int j = 0; j < nump; j++)
+		{
 			particles.push_back(Pos((x+step*i), (y+step*j)));
+			velosities.push_back(Velo(0, 0));
+		}
 }
 
 void FluidCube2D::report()
@@ -1258,6 +1220,17 @@ void FluidCube2D::report()
 	REPORT(totalTime);
 	PRINT("======================================");
 	PRINT("");
+}
+
+void FluidCube2D::addFlowIn()
+{
+	for(int y = _H/8.0*6; y <= _H/8.0*7; y++)
+	{
+		type[IX(0, y)] = type0[IX(0, y)] = FLOWIN;
+		fillParticleInGrid(0, y);
+		Vx[IX(0, y)] = 1;
+		Vy[IX(0, y)] = 0;
+	}
 }
 
 #endif

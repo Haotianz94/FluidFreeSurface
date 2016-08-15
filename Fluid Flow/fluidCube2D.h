@@ -9,7 +9,8 @@ enum GRIDTYPE
 {
 	FLUID,
 	AIR,
-	SOLID
+	SOLID,
+	FLOWIN
 };
 
 struct Pos
@@ -27,7 +28,8 @@ enum SCENETYPE
 	SPHEREFALL,
 	CONTAINER,
 	DAMBREAK,
-	DOUBLEDAM
+	DOUBLEDAM,
+	EMPTY
 };
 
 enum RENDERTYPE
@@ -79,6 +81,7 @@ private:
 
 	//MAC
 	std::vector<Pos> particles;
+	std::vector<Velo> velosities;
 	GRIDTYPE *type0;
 	std::vector<int> **invertedList;
 	
@@ -96,6 +99,7 @@ private:
 	float getVelosity(int index, float x, float y, float *u);
 	Velo getVelosity(float x, float y, float *vx, float *vy);
 	Pos traceParticle(int index, int x, int y, bool backward);
+	void addFlowIn();
 
 	void errorRemove();
 	void fillParticleInGrid(int x, int y);
