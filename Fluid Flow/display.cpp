@@ -1,8 +1,6 @@
 #include "stdafx.h"
 #include "display.h"
 #include <math.h>
-#include <ctime>
-#include <cstdio>
 
 #ifdef SIMULATION_2D
 #include "fluidCube2D.h"
@@ -57,8 +55,6 @@ void initialize(){
 	glutReshapeFunc(reshape); //called when the window is resized
 	glutKeyboardFunc(keyEvent); //called when a standard key is pressed
 	glutSpecialFunc(specKeyEvent); //called when a special key is pressed (ie. enter);
-	
-	srand(time(0));
 
 #endif
 	

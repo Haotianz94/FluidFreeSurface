@@ -4,7 +4,7 @@
 #include <iostream>
 
 #define SIMULATION_2D 1
-//#define OBSTACLE 1
+#define OBSTACLE 1
 #define FLOW_IN
 #define OUTPUT 1
 //#define GAUSS_SEIDEL 1
@@ -19,7 +19,7 @@
 	#define FRAMERATE 200
 	#define NUMPERGRID 5
 	#define GRAVITY 9.8
-	#define MYSCENE CONTAINER
+	#define MYSCENE EMPTY
 	#define MYRENDER PARTICLE
 
 	#define IX(x, y) ( (x) + (y) * (_W+2) )

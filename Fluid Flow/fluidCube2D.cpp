@@ -4,6 +4,8 @@
 #include "fluidCube2D.h"
 #include <memory.h>
 #include <math.h>
+#include <ctime>
+#include <cstdio>
 #include <Eigen\Eigen>
 
 FluidCube2D::FluidCube2D(float viscosity, float fr, SCENETYPE sc, RENDERTYPE rt)
@@ -784,7 +786,9 @@ bool FluidCube2D::calculateTimeStep()
 	if(dt > frameTime)
 		dt = frameTime;
 	
+	dt = frameTime;
 	totalTime += dt;
+	return true;
 
 	if(ctime + dt >= frameTime)
 	{
@@ -1195,12 +1199,16 @@ void FluidCube2D::errorRemove()
 
 void FluidCube2D::fillParticleInGrid(int x, int y)
 {
+	srand(time(0));
 	int nump = NUMPERGRID;
+	int sample = 50;
 	float step = 1.0 / nump;
 	for(int i = 0; i < nump; i++)
 		for(int j = 0; j < nump; j++)
 		{
-			particles.push_back(Pos((x+step*i), (y+step*j)));
+			float x0 = 1.0f * (rand()%sample) / sample;
+			float y0 = 1.0f * (rand()%sample) / sample;
+			particles.push_back(Pos(x+x0, y+y0) );
 			velosities.push_back(Velo(0, 0));
 		}
 }
