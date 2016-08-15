@@ -17,9 +17,9 @@
 	#define VISCOSITY 0.0001
 	#define ITERATION 30
 	#define FRAMERATE 200
-	#define NUMPERGRID 3
+	#define NUMPERGRID 5
 	#define GRAVITY 9.8
-	#define MYSCENE EMPTY
+	#define MYSCENE CONTAINER
 	#define MYRENDER PARTICLE
 
 	#define IX(x, y) ( (x) + (y) * (_W+2) )

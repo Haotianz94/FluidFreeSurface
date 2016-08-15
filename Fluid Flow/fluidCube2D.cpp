@@ -944,9 +944,8 @@ void FluidCube2D::updateGrid()
 				}
 			}
 
-			//if(type[IX(x, y)] == AIR)
-			//	Vx[IX(x, y)] = Vy[IX(x, y)] = 0;
-
+			// set velosity for new fluid cell
+			float downRate = 0.7;
 			if(type0[IX(x, y)] == AIR && type[IX(x, y)] == FLUID)
 			{
 				float vsum = 0;
@@ -1000,12 +999,12 @@ void FluidCube2D::updateGrid()
 						pid = list->at(i);
 					}
 				}
-				if(nsum > 0)
-					Vx[IX(x, y)] = vsum / nsum;
-				else
+				//if(nsum > 0)
+				//	Vx[IX(x, y)] = vsum / nsum * downRate;
+				//else
 				{
 					//for simple only take the nearest particle in the cell
-					Vx[IX(x, y)] = velosities[pid].x;
+					Vx[IX(x, y)] = velosities[pid].x * downRate;
 				}
 
 				dist = 100;
@@ -1058,12 +1057,12 @@ void FluidCube2D::updateGrid()
 						pid = list->at(i);
 					}
 				}
-				if(nsum > 0)
-					Vy[IX(x, y)] = vsum / nsum;
-				else
+				//if(nsum > 0)
+				//	Vy[IX(x, y)] = vsum / nsum;
+				//else
 				{
 					//for simple only take the nearest particle in the cell
-					Vy[IX(x, y)] = velosities[pid].y;
+					Vy[IX(x, y)] = velosities[pid].y * downRate;
 				}
 			}
 		}
