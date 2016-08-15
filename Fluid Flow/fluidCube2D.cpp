@@ -65,6 +65,7 @@ FluidCube2D::FluidCube2D(float viscosity, float fr, SCENETYPE sc, RENDERTYPE rt)
 	//init fluid
 	//cube fall
 	originFluid = 0;
+	fluidNum = 0;
 	switch(scene)
 	{
 	case CUBEFALL:
@@ -144,15 +145,14 @@ FluidCube2D::FluidCube2D(float viscosity, float fr, SCENETYPE sc, RENDERTYPE rt)
 
 
 #ifdef OBSTACLE
-	int cx = _W / 2.0;
-	int cy = _H / 3.0;
-	int R = _H * 0.1;
-	fluidNum = 0;
-	for(int y = 1; y <= _H; y++)
-		for(int x = 1; x <= _W; x++)
+	//int cx = _W / 2.0;
+	//int cy = _H / 4.0;
+	//int R = _H * 0.1;
+	for(int y = 0; y <= _H/3.0; y++)
+		for(int x = _W/8.0*3; x <= _W/8.0*5; x++)
 		{
-			if(DISTANCE(x,y,cx,cy) <= R)
-				type[IX(x, y)] = SOLID;
+			//if(DISTANCE(x,y,cx,cy) <= R)
+			type[IX(x, y)] = SOLID;
 		}
 	/*for(int y = 1; y <= _H; y++)
 		for(int x = 1; x <= _W; x++)
@@ -542,10 +542,20 @@ void FluidCube2D::set_bnd()
 				Vx[IX(x, y)] = 0;
 				Vy[IX(x-1, y)] = Vy[IX(x, y)];
 			}
+			if(type[IX(x+1, y)] == SOLID)
+			{
+				Vx[IX(x+1, y)] = 0;
+				Vy[IX(x+1, y)] = Vy[IX(x, y)];
+			}
 			if(type[IX(x, y-1)] == SOLID)
 			{
 				Vy[IX(x, y)] = 0;
 				Vx[IX(x, y-1)] = Vx[IX(x, y)];
+			}
+			if(type[IX(x, y+1)] == SOLID)
+			{
+				Vy[IX(x, y+1)] = 0;
+				Vx[IX(x, y+1)] = Vx[IX(x, y)];
 			}
 
 			switch(neighAir[IX(x, y)])
@@ -816,11 +826,10 @@ bool FluidCube2D::calculateTimeStep()
 		dt = frameTime;
 	else
 		dt = h / max_v;
-	//if(dt > frameTime)
+	if(dt > frameTime)
+		dt = frameTime;
 	
 	totalTime += dt;
-	dt = frameTime;
-	return true;
 
 	if(ctime + dt >= frameTime)
 	{
@@ -859,15 +868,29 @@ void FluidCube2D::updateParticles()
 		*/
 		if(x1 < 1)
 			x1 = 1;
-		if(x1 >= _W+1)
+		else if(x1 >= _W+1)
 			x1 = _W+0.999;
 		if(y1 < 1)
 			y1 = 1;
-		if(y1 >= _H+1)
+		else if(y1 >= _H+1)
 			y1 = _H+0.999;
 
-		if(type[IX(int(x1), int(y1))] != FLUID)
+		if(type[IX(int(x1), int(y1))] == AIR)
 		{
+			particles[i] = Pos(x1, y1);
+			continue;
+		}
+		else if(type[IX(int(x1), int(y1))] == SOLID)
+		{
+			if(int(x1) > int(x0))
+				x1 = int(x1)-0.1;
+			else if(int(x1) < int(x0))
+				x1 = int(x1)+1.1;
+			if(int(y1) > int(y0))
+				y1 = int(y1)-0.1;
+			else if(int(y1) < int(y0))
+				y1 = int(y1)+1.1;
+
 			particles[i] = Pos(x1, y1);
 			continue;
 		}
@@ -889,13 +912,25 @@ void FluidCube2D::updateParticles()
 		*/
 		if(x1 < 1)
 			x1 = 1;
-		if(x1 >= _W+1)
+		else if(x1 >= _W+1)
 			x1 = _W+0.999;
 		if(y1 < 1)
 			y1 = 1;
-		if(y1 >= _H+1)
+		else if(y1 >= _H+1)
 			y1 = _H+0.999;
-		
+
+		if(type[IX(int(x1), int(y1))] == SOLID)
+		{
+			if(int(x1) > int(x0))
+				x1 = int(x1)-0.1;
+			else if(int(x1) < int(x0))
+				x1 = int(x1)+1.1;
+			if(int(y1) > int(y0))
+				y1 = int(y1)-0.1;
+			else if(int(y1) < int(y0))
+				y1 = int(y1)+1.1;
+		}
+
 		particles[i] = Pos(x1, y1);
 	}
 }
