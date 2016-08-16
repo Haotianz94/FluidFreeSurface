@@ -9,7 +9,8 @@ enum GRIDTYPE
 {
 	FLUID,
 	AIR,
-	SOLID
+	SOLID,
+	FLOWIN
 };
 
 struct Pos
@@ -102,6 +103,7 @@ private:
 	float getVelosity(int index, float x, float y, float z, float *u);
 	Velo getVelosity(float x, float y, float z, float *vx, float *vy, float *vz);
 	Pos traceParticle(int index, int x, int y, int z, bool backward);
+	void addFlowIn();
 
 	void errorRemove();
 	void fillParticleInGrid(int x, int y, int z);

@@ -3,7 +3,7 @@
 
 #include <iostream>
 
-#define SIMULATION_2D 1
+//#define SIMULATION_2D 1
 #define OBSTACLE 1
 #define FLOW_IN
 #define OUTPUT 1
@@ -34,10 +34,10 @@
 	#define GRIDSIZE 40
 	#define VISCOSITY 0.00001
 	#define ITERATION 30
-	#define FRAMERATE 100
+	#define FRAMERATE 200
 	#define NUMPERGRID 6
 	#define GRAVITY 9.8
-	#define MYSCENE DAMBREAK
+	#define MYSCENE EMPTY
 	#define MYRENDER PARTICLE
 
 	#define IX(x, y, z) ((x) + (y)*(_X+2) + (z)*(_X+2)*(_Y+2) )

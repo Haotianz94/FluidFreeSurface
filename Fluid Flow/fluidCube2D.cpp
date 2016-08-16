@@ -1231,9 +1231,6 @@ void FluidCube2D::report()
 
 void FluidCube2D::addFlowIn()
 {
-	int nump = NUMPERGRID;
-	float step = 1.0 / nump;
-
 	for(int y = _H/8.0*6; y <= _H/8.0*7; y++)
 	{
 		type[IX(0, y)] = type0[IX(0, y)] = FLOWIN;

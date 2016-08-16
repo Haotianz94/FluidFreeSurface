@@ -408,49 +408,6 @@ void FluidCube3D::projectVelosity()
 	p.resize(fluidNum);
 	p = solver.solve(b);
 
-	//for(int i = 100; i < 110; i++)
-	//	cout<<p[i]<<' ';
-	//cout<<endl;
-	/*
-	std::cout<<"bbbbbbb"<<std::endl;
-	for(int y = 1; y <= _Y; y++)
-		for(int x = 1; x <= _X; x++)
-		{
-			if(type[IX(x, y)] != FLUID)
-				continue;
-
-			std::cout<<b[pos2index[IX(x,y)]]<<std::endl;
-			if(x == _X)
-				std::cout<<std::endl;
-		}
-	
-	std::cout<<"ppppppp"<<std::endl;
-	for(int y = 1; y <= _Y; y++)
-	{
-		float lastp = -1;
-		for(int x = 1; x <= _X; x++)
-		{
-			if(type[IX(x, y)] != FLUID)
-				continue;
-
-			//std::cout<<p[pos2index[IX(x,10)]]<<std::endl;
-			//if(x == _X)
-				//std::cout<<std::endl;
-			float curp = p[pos2index[IX(x,y)]];
-			if(x == 1)
-				lastp = curp;
-			else
-			{
-				if(curp != lastp)
-				{
-					std::cout<<x<<' '<<y<<' '<<lastp<<' '<<curp<<std::endl;
-					lastp = curp;
-				}
-			}
-		}
-	}
-	*/
-
 	max_p = -9999;
 	for(int i = 0; i < fluidNum; i++)
 		if(p[i] > max_p)
@@ -962,6 +919,10 @@ void FluidCube3D::simulate()
 	//{
 		bool draw = calculateTimeStep();
 	
+#ifdef FLOW_IN
+		addFlowIn();
+#endif
+
 		updateParticles();
 	
 		updateGrid();
@@ -1188,6 +1149,7 @@ bool FluidCube3D::calculateTimeStep()
 	if(dt > frameTime)
 		dt = frameTime;
 
+	dt = frameTime;
 	totalTime += dt;
 	return true;
 
@@ -1247,7 +1209,6 @@ void FluidCube3D::updateParticles()
 			velosities[i] = v0;
 			continue;
 		}
-		
 		else if(type[IX(int(x1), int(y1), int(z1))] == SOLID)
 		{
 			if(int(x1) > int(x0))
@@ -1689,5 +1650,25 @@ void FluidCube3D::report()
 	REPORT(totalTime);
 	PRINT("======================================");
 	PRINT("");
+}
+
+void FluidCube3D::addFlowIn()
+{
+	for(int y = _Y/8.0*6; y <= _Y/8.0*7; y++)
+		for(int x = _X/8.0*3; x <= _X/8.0*5; x++)
+		{
+			type[IX(x, y, 0)] = type0[IX(x, y, 0)] = FLOWIN;
+			fillParticleInGrid(x, y, 1);
+			/*
+			for(int i = 0; i < nump; i++)
+			{
+				particles.push_back(Pos(1.01, y+i*step) );
+				velosities.push_back(Velo(0, 0));
+			}
+			*/
+			Vz[IX(x, y, 0)] = Vz[IX(x, y, 1)] = 2;
+			Vx[IX(x, y, 0)] = 0;
+			Vy[IX(x, y, 0)] = 0;
+		}
 }
 #endif
