@@ -4,6 +4,8 @@
 #include "fluidCube3D.h"
 #include <memory.h>
 #include <math.h>
+#include <ctime>
+#include <cstdio>
 #include <Eigen\Eigen>
 
 extern float px;
@@ -75,6 +77,7 @@ FluidCube3D::FluidCube3D(float viscosity, float fr, SCENETYPE sc, RENDERTYPE rt)
 	//init fluid
 	//cube fall
 	originFluid = 0;
+	fluidNum = 0;
 	switch(scene)
 	{
 	case CUBEFALL:
@@ -139,20 +142,37 @@ FluidCube3D::FluidCube3D(float viscosity, float fr, SCENETYPE sc, RENDERTYPE rt)
 				}
 		break;
 	}
+	case DOUBLEDAM:
+	{
+		for(int z = 1; z <= _Z/4.0; z++)
+			for(int y = 1; y <= _Y/3.0*2; y++)
+				for(int x = 1; x <= _X; x++)
+				{
+					originFluid ++;
+					fillParticleInGrid(x, y, z);
+				}
+		
+		for(int z = _Z/4.0*3; z <= _Z; z++)
+			for(int y = 1; y <= _Y/3.0*2; y++)
+				for(int x = 1; x <= _X; x++)
+				{
+					originFluid ++;
+					fillParticleInGrid(x, y, z);
+				}
+		break;
+	}
+	case EMPTY:
+		break;
 	}
 
 #ifdef OBSTACLE
-	int cx = _X / 2.0;
-	int cy = _Y / 3.0;
-	int R = _Y * 0.1;
-	fluidNum = 0;
-	for(int y = 1; y <= _Y; y++)
-		for(int x = 1; x <= _X; x++)
-		{
-			if(DISTANCE(x,y,cx,cy) <= R)
-				type[IX(x, y)] = SOLID;
-		}
-	/*for(int y = 1; y <= _Y; y++)
+	for(int z = _Z/16.0*7; z <= _Z/16.0*9; z++)
+		for(int y = 1; y <= _Y/3.0*2; y++)
+			for(int x = _X/4.0; x <= _X/4.0*3; x++)
+			{
+				type[IX(x, y, z)] = type0[IX(x, y, z)] = SOLID;
+			}
+		/*for(int y = 1; y <= _Y; y++)
 		for(int x = 1; x <= _X; x++)
 			if(type[IX(x, y)] == SOLID)
 			{
@@ -588,6 +608,24 @@ void FluidCube3D::set_bnd()
 					Vx[IX(x, y, z-1)] = Vx[IX(x, y, z)];
 					Vy[IX(x, y, z-1)] = Vy[IX(x, y, z)];
 				}
+				if(type[IX(x+1, y, z)] == SOLID)
+				{
+					Vx[IX(x+1, y, z)] = 0;
+					Vy[IX(x+1, y, z)] = Vy[IX(x, y, z)];
+					Vz[IX(x+1, y, z)] = Vz[IX(x, y, z)];
+				}
+				if(type[IX(x, y+1, z)] == SOLID)
+				{
+					Vy[IX(x, y+1, z)] = 0;
+					Vx[IX(x, y+1, z)] = Vx[IX(x, y, z)];
+					Vz[IX(x, y+1, z)] = Vz[IX(x, y, z)];
+				}
+				if(type[IX(x, y, z+1)] == SOLID)
+				{
+					Vz[IX(x, y, z+1)] = 0;
+					Vx[IX(x, y, z+1)] = Vx[IX(x, y, z)];
+					Vy[IX(x, y, z+1)] = Vy[IX(x, y, z)];
+				}
 
 				switch(neighAir[IX(x, y, z)])
 				{
@@ -1000,7 +1038,7 @@ void FluidCube3D::render()
 				int z = k+1;
 				float color;
 				if(type[IX(x, y, z)] == SOLID)
-					glColor3f(0, 0.7, 0);
+					glColor4f(0, 0.5, 0, 1);
 				else if(type[IX(x, y, z)] == FLUID)
 				{
 					switch(renderType)
@@ -1180,6 +1218,7 @@ void FluidCube3D::updateParticles()
 		float y1 = y0 + dt * v0.y * hi;
 		float z1 = z0 + dt * v0.z * hi;
 		//if particle out of boundary??
+		/*
 		if(x1 < 1 || x1 >= _X+1 || y1 < 1 || y1 >= _Y+1 || z1 < 1 || z1 >= _Z+1)
 		{
 			std::cout<<"Particle out of bound"<<std::endl;
@@ -1190,20 +1229,41 @@ void FluidCube3D::updateParticles()
 		}
 		if(x1 < 1)
 			x1 = 1;
-		if(x1 >= _X+1)
+		else if(x1 >= _X+1)
 			x1 = _X+0.5;//or 0.999 which is better?
 		if(y1 < 1)
 			y1 = 1;
-		if(y1 >= _Y+1)
+		else if(y1 >= _Y+1)
 			y1 = _Y+0.5;
 		if(z1 < 1)
 			z1 = 1;
-		if(z1 >= _Z+1)
+		else if(z1 >= _Z+1)
 			z1 = _Z+0.5;
+		*/
 
-		if(type[IX(int(x1), int(y1), int(z1))] != FLUID)
+		if(type[IX(int(x1), int(y1), int(z1))] == AIR)
 		{
 			particles[i] = Pos(x1, y1, z1);
+			velosities[i] = v0;
+			continue;
+		}
+		
+		else if(type[IX(int(x1), int(y1), int(z1))] == SOLID)
+		{
+			if(int(x1) > int(x0))
+				x1 = int(x0)+0.99;
+			else if(int(x1) < int(x0))
+				x1 = int(x0)+0.01;
+			if(int(y1) > int(y0))
+				y1 = int(y0)+0.99;
+			else if(int(y1) < int(y0))
+				y1 = int(y0)+0.01;
+			if(int(z1) > int(z0))
+				z1 = int(z0)+0.99;
+			else if(int(z1) < int(z0))
+				z1 = int(z0)+0.01;
+			particles[i] = Pos(x1, y1, z1);
+			velosities[i] = v0;
 			continue;
 		}
 
@@ -1212,6 +1272,7 @@ void FluidCube3D::updateParticles()
 		y1 = y0 + dt * 0.5 * (v0.y + v1.y) * hi;
 		z1 = z0 + dt * 0.5 * (v0.z + v1.z) * hi;
 		//if particle out of boundary???
+		/*
 		if(x1 < 1 || x1 >= _X+1 || y1 < 1 || y1 >= _Y+1 || z1 < 1 || z1 >= _Z+1)
 		{
 			std::cout<<"Particle out of bound"<<std::endl;
@@ -1222,18 +1283,36 @@ void FluidCube3D::updateParticles()
 		}
 		if(x1 < 1)
 			x1 = 1;
-		if(x1 >= _X+1)
+		else if(x1 >= _X+1)
 			x1 = _X+0.5;
 		if(y1 < 1)
 			y1 = 1;
-		if(y1 >= _Y+1)
+		else if(y1 >= _Y+1)
 			y1 = _Y+0.5;
 		if(z1 < 1)
 			z1 = 1;
-		if(z1 >= _Z+1)
+		else if(z1 >= _Z+1)
 			z1 = _Z+0.5;
+		*/
 
+		if(type[IX(int(x1), int(y1), int(z1))] == SOLID)
+		{
+			if(int(x1) > int(x0))
+				x1 = int(x0)+0.99;
+			else if(int(x1) < int(x0))
+				x1 = int(x0)+0.01;
+			if(int(y1) > int(y0))
+				y1 = int(y0)+0.99;
+			else if(int(y1) < int(y0))
+				y1 = int(y0)+0.01;
+			if(int(z1) > int(z0))
+				z1 = int(z0)+0.99;
+			else if(int(z1) < int(z0))
+				z1 = int(z0)+0.01;
+		}
+		
 		particles[i] = Pos(x1, y1, z1);
+		velosities[i] = Velo((v0.x+v1.x)*0.5, (v0.y+v1.y)*0.5, (v0.z+v1.z)*0.5);
 	}
 }
 
@@ -1248,7 +1327,8 @@ void FluidCube3D::updateGrid()
 		for(int y = 1; y <= _Y; y++)
 			for(int x = 1; x <= _X; x++)
 			{
-				if(type0[IX(x, y, z)] != SOLID)
+				//if(type0[IX(x, y, z)] != SOLID)
+				if(type0[IX(x, y, z)] == AIR || type0[IX(x, y, z)] == FLUID)
 				{
 					type[IX(x, y, z)] = AIR;
 					invertedList[IX(x, y, z)]->clear();
@@ -1287,7 +1367,8 @@ void FluidCube3D::updateGrid()
 						int yy = y+dir[i][1];
 						int zz = z+dir[i][2];
 						neighbor[IX(x, y, z)][i] = pos2index[IX(xx, yy, zz)];
-						if(type[IX(xx, yy, zz)] != SOLID)
+						//if(type[IX(xx, yy, zz)] != SOLID)
+						if(type[IX(xx, yy, zz)] == AIR || type[IX(xx, yy, zz)] == FLUID)
 							neighNoneSolid[IX(x, y, z)] ++;
 						if(type[IX(xx, yy, zz)] == AIR)
 							neighAir[IX(x, y, z)] ++;
@@ -1295,6 +1376,7 @@ void FluidCube3D::updateGrid()
 				}
 
 			//set velosity for new fluid cell
+			float downRate = 0.7;
 			if(type0[IX(x, y, z)] == AIR && type[IX(x, y, z)] == FLUID)
 			{
 				float dist = 100;
@@ -1337,7 +1419,8 @@ void FluidCube3D::updateGrid()
 						pid = list->at(i);
 					}
 				}
-				Vx[IX(x, y, z)] = getVelosity(1, particles[pid].x, particles[pid].y, particles[pid].z, Vx);
+				Vx[IX(x, y, z)] = velosities[pid].x * downRate;
+				//Vx[IX(x, y, z)] = getVelosity(1, particles[pid].x, particles[pid].y, particles[pid].z, Vx);
 
 				//Vy
 				dist = 100;
@@ -1377,8 +1460,9 @@ void FluidCube3D::updateGrid()
 						pid = list->at(i);
 					}
 				}
-				Vy[IX(x, y, z)] = getVelosity(2, particles[pid].x, particles[pid].y, particles[pid].z, Vy);
-				
+				Vy[IX(x, y, z)] = velosities[pid].y * downRate;
+				//Vy[IX(x, y, z)] = getVelosity(2, particles[pid].x, particles[pid].y, particles[pid].z, Vy);
+
 				//Vy
 				dist = 100;
 				list = invertedList[IX(x, y, z)];
@@ -1419,7 +1503,8 @@ void FluidCube3D::updateGrid()
 						pid = list->at(i);
 					}
 				}
-				Vz[IX(x, y, z)] = getVelosity(3, particles[pid].x, particles[pid].y, particles[pid].z, Vz);
+				Vz[IX(x, y, z)] = velosities[pid].z * downRate;
+				//Vz[IX(x, y, z)] = getVelosity(3, particles[pid].x, particles[pid].y, particles[pid].z, Vz);
 			}
 
 		}
@@ -1570,12 +1655,23 @@ void FluidCube3D::errorRemove()
 
 void FluidCube3D::fillParticleInGrid(int x, int y, int z)
 {
+	srand(time(0));
 	int nump = NUMPERGRID;
+	int sample = 50;
 	float step = 1.0 / nump;
 	for(int i = 0; i < nump; i++)
 		for(int j = 0; j < nump; j++)
 			for(int k = 0; k < nump; k++)
-				particles.push_back(Pos((x+step*i), (y+step*j), (z+step*k)));
+			{
+				float x0 = 1.0f * (rand()%sample) / sample;
+				float y0 = 1.0f * (rand()%sample) / sample;
+				float z0 = 1.0f * (rand()%sample) / sample;
+				//float x0 = i * step;
+				//float y0 = j * step;
+				//float z0 = k * step;
+				particles.push_back(Pos(x+x0, y+y0, z+z0) );
+				velosities.push_back(Velo(0, 0, 0));
+			}
 }
 
 void FluidCube3D::report()

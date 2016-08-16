@@ -27,7 +27,9 @@ enum SCENETYPE
 	CUBEFALL,
 	SPHEREFALL,
 	CONTAINER,
-	DAMBREAK
+	DAMBREAK,
+	DOUBLEDAM,
+	EMPTY
 };
 
 enum RENDERTYPE
@@ -82,6 +84,7 @@ private:
 
 	//MAC
 	std::vector<Pos> particles;
+	std::vector<Velo> velosities;
 	GRIDTYPE *type0;
 	std::vector<int> **invertedList;
 	

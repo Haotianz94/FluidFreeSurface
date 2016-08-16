@@ -824,7 +824,6 @@ void FluidCube2D::updateParticles()
 			REPORT(y1);
 			//system("pause");
 		}
-		*/
 		if(x1 < 1)
 			x1 = 1;
 		else if(x1 >= _W+1)
@@ -833,6 +832,7 @@ void FluidCube2D::updateParticles()
 			y1 = 1;
 		else if(y1 >= _H+1)
 			y1 = _H+0.999;
+		*/
 
 		if(type[IX(int(x1), int(y1))] == AIR)
 		{
@@ -843,15 +843,16 @@ void FluidCube2D::updateParticles()
 		else if(type[IX(int(x1), int(y1))] == SOLID)
 		{
 			if(int(x1) > int(x0))
-				x1 = int(x1)-0.1;
+				x1 = int(x0)+0.99;
 			else if(int(x1) < int(x0))
-				x1 = int(x1)+1.1;
+				x1 = int(x0)+0.01;
 			if(int(y1) > int(y0))
-				y1 = int(y1)-0.1;
+				y1 = int(y0)+0.99;
 			else if(int(y1) < int(y0))
-				y1 = int(y1)+1.1;
+				y1 = int(y0)+0.01;
 
 			particles[i] = Pos(x1, y1);
+			velosities[i] = Velo(vx0, vy0);
 			continue;
 		}
 
@@ -869,7 +870,6 @@ void FluidCube2D::updateParticles()
 			REPORT(y1);
 			//system("pause");
 		}
-		*/
 		if(x1 < 1)
 			x1 = 1;
 		else if(x1 >= _W+1)
@@ -878,17 +878,17 @@ void FluidCube2D::updateParticles()
 			y1 = 1;
 		else if(y1 >= _H+1)
 			y1 = _H+0.999;
-
+		*/
 		if(type[IX(int(x1), int(y1))] == SOLID)
 		{
 			if(int(x1) > int(x0))
-				x1 = int(x1)-0.1;
+				x1 = int(x0)+0.99;
 			else if(int(x1) < int(x0))
-				x1 = int(x1)+1.1;
+				x1 = int(x0)+0.01;
 			if(int(y1) > int(y0))
-				y1 = int(y1)-0.1;
+				y1 = int(y0)+0.99;
 			else if(int(y1) < int(y0))
-				y1 = int(y1)+1.1;
+				y1 = int(y0)+0.01;
 		}
 
 		particles[i] = Pos(x1, y1);
@@ -1231,11 +1231,21 @@ void FluidCube2D::report()
 
 void FluidCube2D::addFlowIn()
 {
+	int nump = NUMPERGRID;
+	float step = 1.0 / nump;
+
 	for(int y = _H/8.0*6; y <= _H/8.0*7; y++)
 	{
 		type[IX(0, y)] = type0[IX(0, y)] = FLOWIN;
-		fillParticleInGrid(0, y);
-		Vx[IX(0, y)] = 1;
+		fillParticleInGrid(1, y);
+		/*
+		for(int i = 0; i < nump; i++)
+		{
+			particles.push_back(Pos(1.01, y+i*step) );
+			velosities.push_back(Velo(0, 0));
+		}
+		*/
+		Vx[IX(0, y)] = Vx[IX(1, y)] = 1;
 		Vy[IX(0, y)] = 0;
 	}
 }
