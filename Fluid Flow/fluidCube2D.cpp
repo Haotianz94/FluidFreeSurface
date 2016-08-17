@@ -744,6 +744,8 @@ void FluidCube2D::render()
 
 			if(pixelType[index] != SOLID && pixelType[index] != FLOWIN)
 			{
+				//origin blobby sited by Bridson
+				/*
 				double F = 0;
 				bool inside = false;
 				std::vector<int> *list;
@@ -762,6 +764,48 @@ void FluidCube2D::render()
 					}
 				}
 				if(!inside)
+				{
+					pixels[index * 3] = 0.5;
+					pixels[index * 3 + 1] = 0.5;
+					pixels[index * 3 + 2] = 0.5;
+				}
+				*/
+				//improved version by Zhu and Bridson
+
+				double Fai = -1;
+				Eigen::Vector2d Xu(0, 0);
+				double ru = 0, F = 0;
+				std::vector<int> *list;
+				for(int i = 0; i < 9; i++)
+				{
+					list = invertedList[IX(X+dir2[i][0], Y+dir2[i][1])];
+					for(unsigned j = 0; j < list->size(); j++)
+					{
+						float x0 = particles[list->at(j)].x*GRIDSIZE;
+						float y0 = particles[list->at(j)].y*GRIDSIZE;
+						double ker = blobbyKernel(DISTANCE2(x0, y0, x, y) * h2i);
+						Xu += ker * Eigen::Vector2d(x0, y0);
+						ru += ker * r; //for simple use the average r, but the radii to the closest particle is better
+						F += ker;
+					}
+				}
+				if(F > 0)
+				{
+					Fai = DISTANCE(x, y, Xu[0]/F, Xu[1]/F) - ru/F;
+				}
+				if(fabs(Fai) < 0.5)
+				{
+					pixels[index * 3] = 0;
+					pixels[index * 3 + 1] = 0;
+					pixels[index * 3 + 2] = 0.7;
+				}
+				else if(F == 0)
+				{
+					pixels[index * 3] = 0;
+					pixels[index * 3 + 1] = 0.7;
+					pixels[index * 3 + 2] = 0.7;
+				}
+				else
 				{
 					pixels[index * 3] = 0.5;
 					pixels[index * 3 + 1] = 0.5;

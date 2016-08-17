@@ -40,7 +40,8 @@ enum RENDERTYPE
 	PRESSURE,
 	DIVERGENCE,
 	PARTICLE,
-	FLUIDGRID
+	FLUIDGRID,
+	BLOBBY
 };
 
 class FluidCube3D
@@ -96,6 +97,9 @@ private:
 	float ctime;
 	float frameTime;
 
+	//Blobby
+	Eigen::Vector3i dir2[27];
+
 private:
 	bool calculateTimeStep();
 	void updateParticles();
@@ -104,6 +108,8 @@ private:
 	Velo getVelosity(float x, float y, float z, float *vx, float *vy, float *vz);
 	Pos traceParticle(int index, int x, int y, int z, bool backward);
 	void addFlowIn();
+	void createBlobby();
+	double blobbyKernel(double s2);
 
 	void errorRemove();
 	void fillParticleInGrid(int x, int y, int z);

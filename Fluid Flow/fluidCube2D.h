@@ -66,7 +66,6 @@ private:
 	
 	//Projection using Conjugate Gradient
 	Eigen::Vector2i dir[4];
-	Eigen::Vector2i dir2[9];
 	int fluidNum;
 	int originFluid;
 	int **neighbor;
@@ -97,6 +96,7 @@ private:
 	//Blobby
 	float* pixels;
 	GRIDTYPE* pixelType;
+	Eigen::Vector2i dir2[9];
 
 private:
 	bool calculateTimeStep();

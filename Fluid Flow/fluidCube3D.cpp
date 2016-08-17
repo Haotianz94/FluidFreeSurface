@@ -2,6 +2,7 @@
 #ifndef SIMULATION_2D
 
 #include "fluidCube3D.h"
+#include "CIsoSurface.h"
 #include <memory.h>
 #include <math.h>
 #include <ctime>
@@ -73,6 +74,12 @@ FluidCube3D::FluidCube3D(float viscosity, float fr, SCENETYPE sc, RENDERTYPE rt)
 		for(int y = 1; y <= _Y; y++)
 			for(int x = 1; x <= _X; x++)
 				type[IX(x,y,z)] = AIR;
+
+	//Blobby
+	for(int i = 0; i < 3; i++)
+		for(int j = 0; j < 3; j++)
+			for(int k = 0; k < 3; k++)
+				dir2[i + j*3 + k*9] = Eigen::Vector3i(i-1, j-1, k-1);
 
 	//init fluid
 	//cube fall
@@ -1673,4 +1680,105 @@ void FluidCube3D::addFlowIn()
 			Vy[IX(x, y, 0)] = 0;
 		}
 }
+
+void FluidCube3D::createBlobby()
+{
+	int gridSize = GRIDSIZE;
+	double r = 1.0 * gridSize / NUMPERGRID;
+	double h = 3 * r;
+	double h2i = 1 / (h*h);
+	double thresh = blobbyKernel( (r*r) / (h*h) );
+	
+	float *scalarField = new float [_X * _Y * _Z * gridSize * gridSize * gridSize]; 
+
+	for(int z = 0; z < _Z * gridSize; z++)
+		for(int y = 0; y < _Y * gridSize; y++)
+			for(int x = 0; x < _X * gridSize; x++)
+			{
+				int index = x + y * _X * gridSize + z * _X * gridSize * _Y * gridSize;
+
+				int X = x / gridSize + 1;
+				int Y = y / gridSize + 1;
+				int Z = z / gridSize + 1;
+
+				//origin blobby sited by Bridson
+				
+				double F = 0;
+				bool inside = false;
+				std::vector<int> *list;
+				for(int i = 0; i < 27; i++)
+				{
+					list = invertedList[IX(X+dir2[i][0], Y+dir2[i][1], Z+dir2[i][2])];
+					for(unsigned j = 0; j < list->size(); j++)
+					{
+						float x0 = (particles[list->at(j)].x-1) * gridSize;
+						float y0 = (particles[list->at(j)].y-1) * gridSize;
+						float z0 = (particles[list->at(j)].y-1) * gridSize;
+						F += blobbyKernel(DISTANCE2(x0, y0 ,z0, x, y, z) * h2i);
+					}
+				}
+				scalarField[index] = F;
+				//improved version by Zhu and Bridson
+				/*
+				double Fai = -1;
+				Eigen::Vector2d Xu(0, 0);
+				double ru = 0, F = 0;
+				std::vector<int> *list;
+				for(int i = 0; i < 9; i++)
+				{
+					list = invertedList[IX(X+dir2[i][0], Y+dir2[i][1])];
+					for(unsigned j = 0; j < list->size(); j++)
+					{
+						float x0 = particles[list->at(j)].x*gridSize;
+						float y0 = particles[list->at(j)].y*gridSize;
+						double ker = blobbyKernel(DISTANCE2(x0, y0, x, y) * h2i);
+						Xu += ker * Eigen::Vector2d(x0, y0);
+						ru += ker * r; //for simple use the average r, but the radii to the closest particle is better
+						F += ker;
+					}
+				}
+				if(F > 0)
+				{
+					Fai = DISTANCE(x, y, Xu[0]/F, Xu[1]/F) - ru/F;
+				}
+				if(fabs(Fai) < 0.5)
+				{
+					pixels[index * 3] = 0;
+					pixels[index * 3 + 1] = 0;
+					pixels[index * 3 + 2] = 0.7;
+				}
+				else if(F == 0)
+				{
+					pixels[index * 3] = 0;
+					pixels[index * 3 + 1] = 0.7;
+					pixels[index * 3 + 2] = 0.7;
+				}
+				else
+				{
+					pixels[index * 3] = 0.5;
+					pixels[index * 3 + 1] = 0.5;
+					pixels[index * 3 + 2] = 0.5;
+				}
+				*/
+			}
+	//create surface and write to obj
+	CIsoSurface<float> builder;
+	builder.GenerateSurface(scalarField, thresh, _X*gridSize-1, _Y*gridSize-1, _Z*gridSize-1, 1, 1, 1);
+
+	unsigned Nver = builder.m_nVertices;
+	unsigned Ntri = builder.m_nTriangles;
+
+
+
+}
+
+double FluidCube3D::blobbyKernel(double s2)
+{
+	if(s2 < 1)
+		return (1-s2)*(1-s2)*(1-s2);
+	else
+		return 0;
+}
+
+
 #endif
