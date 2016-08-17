@@ -420,7 +420,7 @@ void FluidCube3D::projectVelosity()
 				if(type[IX(x, y, z)] != FLUID)
 					continue;
 
-				double p1, p2;
+				float p1, p2;
 				p2 = p[pos2index[IX(x, y, z)]];
 				//Vx
 				if(type[IX(x-1, y, z)] == AIR)
@@ -973,6 +973,8 @@ void FluidCube3D::render()
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glEnable(GL_POINT_SMOOTH);
 	glEnable(GL_LINE_SMOOTH);
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LESS);
 
 	//calculate divergence
 	if(renderType == DIVERGENCE)

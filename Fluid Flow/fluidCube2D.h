@@ -39,7 +39,8 @@ enum RENDERTYPE
 	PRESSURE,
 	DIVERGENCE,
 	PARTICLE,
-	FLUIDGRID
+	FLUIDGRID,
+	BLOBBY
 };
 
 class FluidCube2D
@@ -65,6 +66,7 @@ private:
 	
 	//Projection using Conjugate Gradient
 	Eigen::Vector2i dir[4];
+	Eigen::Vector2i dir2[9];
 	int fluidNum;
 	int originFluid;
 	int **neighbor;
@@ -91,6 +93,10 @@ private:
 	int iteration;
 	float ctime;
 	float frameTime;
+
+	//Blobby
+	float* pixels;
+	GRIDTYPE* pixelType;
 
 private:
 	bool calculateTimeStep();
@@ -119,6 +125,8 @@ private:
 
 	void output(float *u);
 	void report();
+
+	double blobbyKernel(double s2);
 
 public:
 	FluidCube2D(float viscosity, float fr, SCENETYPE sc = CONTAINER, RENDERTYPE rt = PARTICLE);

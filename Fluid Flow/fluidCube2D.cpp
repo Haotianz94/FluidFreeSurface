@@ -33,9 +33,17 @@ FluidCube2D::FluidCube2D(float viscosity, float fr, SCENETYPE sc, RENDERTYPE rt)
 	div = new float [size];
 	type = new GRIDTYPE [size];
 
+	memset(Vx, 0, sizeof(float) * size);
+	memset(Vy, 0, sizeof(float) * size);
+	memset(Vx0, 0, sizeof(float) * size);
+	memset(Vy0, 0, sizeof(float) * size);
+	memset(div, 0, sizeof(float) * size);
+
 	//Advection using BFECC
 	fai_b = new float [size];
 	fai_f = new float [size];
+	memset(fai_b, 0, sizeof(float) * size);
+	memset(fai_f, 0, sizeof(float) * size);
 
 	//Projection using Conjugate Gradient
 	dir[0] = Eigen::Vector2i(0, -1);
@@ -63,6 +71,40 @@ FluidCube2D::FluidCube2D(float viscosity, float fr, SCENETYPE sc, RENDERTYPE rt)
 	for(int y = 1; y <= _H; y++)
 		for(int x = 1; x <= _W; x++)
 			type[IX(x,y)] = AIR;
+
+	//Blobby
+	pixels = new float [size * GRIDSIZE * GRIDSIZE* 3];
+	pixelType = new GRIDTYPE [size * GRIDSIZE * GRIDSIZE];
+	for(int y = 0; y < (_H+2)*GRIDSIZE; y++)
+		for(int x = 0; x < (_W+2)*GRIDSIZE; x++)
+		{
+			int i = x / GRIDSIZE;
+			int j = y / GRIDSIZE;
+			int index = IX2(x, y);
+			if(type[IX(i, j)] == SOLID)
+			{
+				pixels[index*3]		= 0; //R
+				pixels[index*3 + 1]	= 0.7; //G
+				pixels[index*3 + 2]	= 0; //B
+				pixelType[index] = SOLID;
+			}
+			else
+			{
+				pixels[index*3]		= 0.5; //R
+				pixels[index*3 + 1]	= 0.5; //G
+				pixels[index*3 + 2]	= 0.5; //B
+				pixelType[index] = AIR;
+			}
+		}
+	dir2[0] = Eigen::Vector2i(0, 0);
+	dir2[1] = Eigen::Vector2i(0, 1);
+	dir2[2] = Eigen::Vector2i(0, -1);
+	dir2[3] = Eigen::Vector2i(1, 0);
+	dir2[4] = Eigen::Vector2i(-1, 0);
+	dir2[5] = Eigen::Vector2i(1, 1);
+	dir2[6] = Eigen::Vector2i(1, -1);
+	dir2[7] = Eigen::Vector2i(-1, 1);
+	dir2[8] = Eigen::Vector2i(-1, -1);
 
 	//init fluid
 	//cube fall
@@ -175,13 +217,6 @@ FluidCube2D::FluidCube2D(float viscosity, float fr, SCENETYPE sc, RENDERTYPE rt)
 	*/
 #endif
 
-	memset(Vx, 0, sizeof(float) * size);
-	memset(Vy, 0, sizeof(float) * size);
-	memset(Vx0, 0, sizeof(float) * size);
-	memset(Vy0, 0, sizeof(float) * size);
-	memset(div, 0, sizeof(float) * size);
-	memset(fai_b, 0, sizeof(float) * size);
-	memset(fai_f, 0, sizeof(float) * size);
 }
 
 FluidCube2D::~FluidCube2D()
@@ -207,6 +242,9 @@ FluidCube2D::~FluidCube2D()
 	for(int i = 0; i < size; i++)
 		delete[] invertedList[i];
 	delete [] invertedList;
+
+	delete [] pixels;
+	delete [] pixelType;
 }
 
 void FluidCube2D::vel_step()
@@ -227,7 +265,7 @@ void FluidCube2D::vel_step()
 	projectVelosity();
 	set_bnd();
 
-	errorRemove();
+	//errorRemove();
 }
 
 void FluidCube2D::addForce()
@@ -374,7 +412,7 @@ void FluidCube2D::projectVelosity()
 			if(type[IX(x, y)] != FLUID)
 				continue;
 
-			double p1, p2;
+			float p1, p2;
 			p2 = p[pos2index[IX(x,y)]];
 			//Vx
 			if(type[IX(x-1, y)] == AIR)
@@ -649,7 +687,93 @@ void FluidCube2D::render()
 			}
 	}
 
-	for(int i = 0; i <= _W+1; i++)
+	if(renderType == PARTICLE)
+	{
+		for(int i = 0; i <= _W+1; i++)
+		for(int j = 0; j <= _H+1; j++)
+		{
+			int x = i;
+			int y = j;
+			float color;
+
+			if(type[IX(x, y)] == SOLID)
+				glColor3f(0, 0.5, 0);
+			else if(type[IX(x, y)] == FLOWIN)
+				glColor3f(0, 0, 0.7);
+		}
+
+		//draw particles
+		glColor3f(0, 0, 0.7);
+		glBegin(GL_POINTS);
+		for(unsigned i = 0; i < particles.size(); i++)
+		{
+			glVertex2f(particles[i].x*GRIDSIZE, particles[i].y*GRIDSIZE);
+		}
+		glEnd();
+	}
+	else if(renderType == BLOBBY)
+	{
+		double r = 1.0 * GRIDSIZE / NUMPERGRID;
+		double h = 3 * r;
+		double h2i = 1 / (h*h);
+		double thresh = blobbyKernel( (r*r) / (h*h) );
+		
+		for(int y = 0; y < (_H+2)*GRIDSIZE; y++)
+		for(int x = 0; x < (_W+2)*GRIDSIZE; x++)
+		{
+			int index = IX2(x, y);
+
+			int X = x / GRIDSIZE;
+			int Y = y / GRIDSIZE;
+			/*
+			if(neighAir[IX(i, j)] == 0 || neighAir[IX(i, j)] == 4)
+			{
+				pixels[index * 3] = 0;
+				pixels[index * 3 + 1] = 0;
+				pixels[index * 3 + 2] = 0.7;
+				continue;
+			}
+			else
+			{
+				pixels[index * 3] = 0.5;
+				pixels[index * 3 + 1] = 0.5;
+				pixels[index * 3 + 2] = 0.5;
+			}
+			continue;
+			*/
+
+			if(pixelType[index] != SOLID && pixelType[index] != FLOWIN)
+			{
+				double F = 0;
+				bool inside = false;
+				std::vector<int> *list;
+				for(int i = 0; i < 9; i++)
+				{
+					list = invertedList[IX(X+dir2[i][0], Y+dir2[i][1])];
+					for(unsigned j = 0; j < list->size(); j++)
+						F += blobbyKernel(DISTANCE2(particles[list->at(j)].x*GRIDSIZE, particles[list->at(j)].y*GRIDSIZE, x, y) * h2i);
+					if(F >= thresh)
+					{
+						pixels[index * 3] = 0;
+						pixels[index * 3 + 1] = 0;
+						pixels[index * 3 + 2] = 0.7;
+						inside = true;
+						break;
+					}
+				}
+				if(!inside)
+				{
+					pixels[index * 3] = 0.5;
+					pixels[index * 3 + 1] = 0.5;
+					pixels[index * 3 + 2] = 0.5;
+				}
+			}
+		}
+		glDrawPixels((_W+2)*GRIDSIZE, (_H+2)*GRIDSIZE, GL_RGB, GL_FLOAT, pixels);
+	}
+	else
+	{
+		for(int i = 0; i <= _W+1; i++)
 		for(int j = 0; j <= _H+1; j++)
 		{
 			int x = i;
@@ -688,9 +812,6 @@ void FluidCube2D::render()
 					else
 						glColor3f(0, 0, 0.7);
 					break;
-				case PARTICLE:
-					continue;
-					break;
 				default:
 					glColor3f(0, 0, 0.7);
 					break;
@@ -711,18 +832,8 @@ void FluidCube2D::render()
 			//if(GRIDSIZE >= 10 && type[IX(x, y)] == FLUID)
 			//	draw_velo(i, j, Vx[IX(x, y)], Vy[IX(x, y)]);
 		}
-
-	//draw particles
-	if(renderType == PARTICLE)
-	{
-		glColor3f(0, 0, 0.7);
-		glBegin(GL_POINTS);
-		for(unsigned i = 0; i < particles.size(); i++)
-		{
-			glVertex2f(particles[i].x*GRIDSIZE, particles[i].y*GRIDSIZE);
-		}
-		glEnd();
 	}
+
 	glutSwapBuffers();
 }
 
@@ -1245,6 +1356,14 @@ void FluidCube2D::addFlowIn()
 		Vx[IX(0, y)] = Vx[IX(1, y)] = 1;
 		Vy[IX(0, y)] = 0;
 	}
+}
+
+double FluidCube2D::blobbyKernel(double s2)
+{
+	if(s2 < 1)
+		return (1-s2)*(1-s2)*(1-s2);
+	else
+		return 0;
 }
 
 #endif

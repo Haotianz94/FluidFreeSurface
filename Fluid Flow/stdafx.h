@@ -3,9 +3,9 @@
 
 #include <iostream>
 
-//#define SIMULATION_2D 1
-#define OBSTACLE 1
-#define FLOW_IN
+#define SIMULATION_2D 1
+//#define OBSTACLE 1
+//#define FLOW_IN
 #define OUTPUT 1
 //#define GAUSS_SEIDEL 1
 
@@ -17,14 +17,16 @@
 	#define VISCOSITY 0.0001
 	#define ITERATION 30
 	#define FRAMERATE 200
-	#define NUMPERGRID 5
+	#define NUMPERGRID 4
 	#define GRAVITY 9.8
-	#define MYSCENE EMPTY
-	#define MYRENDER PARTICLE
+	#define MYSCENE DAMBREAK
+	#define MYRENDER BLOBBY
 
 	#define IX(x, y) ( (x) + (y) * (_W+2) )
+	#define IX2(x, y) ( (x) + (y) * (_W+2) * GRIDSIZE )
 	#define BOUNDED(x, y) ( (type[IX(int(x),int(y))] == SOLID || type[IX(int(x)+1,int(y)+1)] == SOLID)? false : true)
 	#define DISTANCE(x1, y1, x2, y2) ( sqrtf((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2)) )
+	#define DISTANCE2(x1, y1, x2, y2) ( (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2) )
 
 #else
 	#define _X 20
@@ -37,7 +39,7 @@
 	#define FRAMERATE 200
 	#define NUMPERGRID 6
 	#define GRAVITY 9.8
-	#define MYSCENE EMPTY
+	#define MYSCENE	EMPTY
 	#define MYRENDER PARTICLE
 
 	#define IX(x, y, z) ((x) + (y)*(_X+2) + (z)*(_X+2)*(_Y+2) )

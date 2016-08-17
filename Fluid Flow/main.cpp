@@ -2,6 +2,8 @@
 #include "display.h"
 #include <Eigen\Eigen>
 
+void testBlobby2D();
+
 int main(int argc, char* argv[])
 {
 	PRINT("Program Starting");
