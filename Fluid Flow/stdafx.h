@@ -4,14 +4,14 @@
 #include <iostream>
 
 //#define SIMULATION_2D 1
-//#define OBSTACLE 1
-//#define FLOW_IN
+#define OBSTACLE 1
+#define FLOW_IN
 #define OUTPUT 1
 //#define GAUSS_SEIDEL 1
 
 #ifdef SIMULATION_2D
-	#define _W 80 
-	#define _H 80
+	#define _W 60
+	#define _H 60
 	#define _L 1.0
  	#define GRIDSIZE 10
 	#define VISCOSITY 0.0001
@@ -19,7 +19,7 @@
 	#define FRAMERATE 200
 	#define NUMPERGRID 4
 	#define GRAVITY 9.8
-	#define MYSCENE DAMBREAK
+	#define MYSCENE EMPTY
 	#define MYRENDER BLOBBY
 
 	#define IX(x, y) ( (x) + (y) * (_W+2) )

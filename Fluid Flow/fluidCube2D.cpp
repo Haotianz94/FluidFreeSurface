@@ -190,6 +190,15 @@ FluidCube2D::FluidCube2D(float viscosity, float fr, SCENETYPE sc, RENDERTYPE rt)
 		{
 			//if(DISTANCE(x,y,cx,cy) <= R)
 			type[IX(x, y)] = SOLID;
+			for(int j = y*GRIDSIZE; j < (y+1)*GRIDSIZE; j++)
+				for(int i = x*GRIDSIZE; i < (x+1)*GRIDSIZE; i++)
+				{
+					int index = IX2(i, j);
+					pixels[index*3]		= 0; //R
+					pixels[index*3 + 1]	= 0.7; //G
+					pixels[index*3 + 2]	= 0; //B
+					pixelType[index] = SOLID;
+				}
 		}
 	/*for(int y = 1; y <= _H; y++)
 		for(int x = 1; x <= _W; x++)
@@ -799,12 +808,14 @@ void FluidCube2D::render()
 					pixels[index * 3 + 1] = 0;
 					pixels[index * 3 + 2] = 0.7;
 				}
+				/*
 				else if(F == 0)
 				{
 					pixels[index * 3] = 0;
 					pixels[index * 3 + 1] = 0.7;
 					pixels[index * 3 + 2] = 0.7;
 				}
+				*/
 				else
 				{
 					pixels[index * 3] = 0.5;
@@ -1399,6 +1410,17 @@ void FluidCube2D::addFlowIn()
 		*/
 		Vx[IX(0, y)] = Vx[IX(1, y)] = 1;
 		Vy[IX(0, y)] = 0;
+
+		//Blobby
+		for(int j = y*GRIDSIZE; j < (y+1)*GRIDSIZE; j++)
+			for(int i = 0; i < GRIDSIZE; i++)
+			{
+				int index = IX2(i, j);
+				pixels[index*3]		= 0; //R
+				pixels[index*3 + 1]	= 0; //G
+				pixels[index*3 + 2]	= 0.7; //B
+				pixelType[index] = FLOWIN;
+			}
 	}
 }
 
