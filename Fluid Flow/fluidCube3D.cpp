@@ -937,13 +937,14 @@ void FluidCube3D::simulate()
 	
 		vel_step();
 
+		report();
+
 		if(draw)
 #ifdef CREATEBLOBBY
 			createBlobbySurface();
 #else
 			render();
 #endif
-		report();
 }
 
 void FluidCube3D::output(float *u)
@@ -1049,7 +1050,7 @@ void FluidCube3D::render()
 					//		  - 0.5 * (Vx[IX(x, y+1)] - Vx[IX(x, y-1)]);
 					}
 				}
-				else
+				else //AIR
 					continue;
 
 				//draw cube 
@@ -1666,11 +1667,11 @@ void FluidCube3D::report()
 
 void FluidCube3D::addFlowIn()
 {
-	for(int y = _Y/8.0*6; y <= _Y/8.0*7; y++)
-		for(int x = _X/8.0*3; x <= _X/8.0*5; x++)
+	for(int z = _Z/2.0-1; z <= _Z/2.0+1; z++)
+		for(int x = _X/2.0-1; x <= _X/2.0+1; x++)
 		{
-			type[IX(x, y, 0)] = type0[IX(x, y, 0)] = FLOWIN;
-			fillParticleInGrid(x, y, 1);
+			type[IX(x, _Y+1, z)] = type0[IX(x, _Y, z)] = FLOWIN;
+			fillParticleInGrid(x, _Y, z);
 			/*
 			for(int i = 0; i < nump; i++)
 			{
@@ -1678,9 +1679,7 @@ void FluidCube3D::addFlowIn()
 				velosities.push_back(Velo(0, 0));
 			}
 			*/
-			Vz[IX(x, y, 0)] = Vz[IX(x, y, 1)] = 2;
-			Vx[IX(x, y, 0)] = 0;
-			Vy[IX(x, y, 0)] = 0;
+			Vy[IX(x, _Y, z)] = Vy[IX(x, _Y+1, z)] = -2;
 		}
 }
 
@@ -1695,6 +1694,9 @@ void FluidCube3D::createBlobbySurface()
 	int border = 6;
 	float *scalarField = new float [(_X+border) * (_Y+border) * (_Z+border) * gridSize * gridSize * gridSize]; 
 
+	PRINT("Start to sample the implict function on the grid...");
+	clock_t start = clock();
+
 	for(int z = 0; z < (_Z+border) * gridSize; z++)
 		for(int y = 0; y < (_Y+border) * gridSize; y++)
 			for(int x = 0; x < (_X+border) * gridSize; x++)
@@ -1705,18 +1707,27 @@ void FluidCube3D::createBlobbySurface()
 				int Y = y / gridSize - border/2;
 				int Z = z / gridSize - border/2;
 
-				//origin blobby sited by Bridson
+				if(BOUNDED(X,Y,Z) && type[IX(X, Y, Z)] == FLUID && neighNoneSolid[IX(X, Y, Z)] - neighAir[IX(X, Y, Z)] == 6)
+				{
+					//scalarField[index] = 2 * thresh;
+					scalarField[index] = -1;
+					continue;
+				}
 				
+				//origin blobby sited by Bridson
 				double F = 0;
-				bool inside = false;
+				//improved version by Zhu and Bridson
+				double Fai = -1;
+				Eigen::Vector3d Xu(0, 0, 0);
+				double ru = 0, F = 0;
 				std::vector<int> *list;
 				for(int i = 0; i < 27; i++)
 				{
 					int xx = X + dir2[i][0];
 					int yy = Y + dir2[i][1];
 					int zz = Z + dir2[i][2];
-					if(xx >= 1 && xx <=_X && yy >= 1 && yy <= _Y && zz >= 1 && zz <= _Z)
-						list = invertedList[IX(X+dir2[i][0], Y+dir2[i][1], Z+dir2[i][2])];
+					if(BOUNDED(xx, yy, zz))
+						list = invertedList[IX(xx, yy, zz)];
 					else
 						continue;
 					for(unsigned j = 0; j < list->size(); j++)
@@ -1724,53 +1735,26 @@ void FluidCube3D::createBlobbySurface()
 						float x0 = (particles[list->at(j)].x + border/2) * gridSize;
 						float y0 = (particles[list->at(j)].y + border/2) * gridSize;
 						float z0 = (particles[list->at(j)].z + border/2) * gridSize;
-						F += blobbyKernel(DISTANCE2(x0, y0 ,z0, x, y, z) * h2i);
-					}
-				}
-				scalarField[index] = F;
-				//improved version by Zhu and Bridson
-				/*
-				double Fai = -1;
-				Eigen::Vector2d Xu(0, 0);
-				double ru = 0, F = 0;
-				std::vector<int> *list;
-				for(int i = 0; i < 9; i++)
-				{
-					list = invertedList[IX(X+dir2[i][0], Y+dir2[i][1])];
-					for(unsigned j = 0; j < list->size(); j++)
-					{
-						float x0 = particles[list->at(j)].x*gridSize;
-						float y0 = particles[list->at(j)].y*gridSize;
-						double ker = blobbyKernel(DISTANCE2(x0, y0, x, y) * h2i);
-						Xu += ker * Eigen::Vector2d(x0, y0);
+						double ker = blobbyKernel(DISTANCE2(x0, y0, z0, x, y, z) * h2i);
+						Xu += ker * Eigen::Vector2d(x0, y0, z0);
 						ru += ker * r; //for simple use the average r, but the radii to the closest particle is better
 						F += ker;
 					}
 				}
+				//scalarField[index] = F;
+
 				if(F > 0)
-				{
-					Fai = DISTANCE(x, y, Xu[0]/F, Xu[1]/F) - ru/F;
-				}
-				if(fabs(Fai) < 0.5)
-				{
-					pixels[index * 3] = 0;
-					pixels[index * 3 + 1] = 0;
-					pixels[index * 3 + 2] = 0.7;
-				}
-				else if(F == 0)
-				{
-					pixels[index * 3] = 0;
-					pixels[index * 3 + 1] = 0.7;
-					pixels[index * 3 + 2] = 0.7;
-				}
-				else
-				{
-					pixels[index * 3] = 0.5;
-					pixels[index * 3 + 1] = 0.5;
-					pixels[index * 3 + 2] = 0.5;
-				}
-				*/
+					Fai = DISTANCE(x, y, z, Xu[0]/F, Xu[1]/F, Xu[2]/F) - ru/F;
+				scalarField[index] = Fai;
 			}
+	
+	clock_t timeCost = clock() - start;
+	std::cout<<"Finish sampling in "<<timeCost<<" ms"<<std::endl;
+	PRINT("Start to calculate the surface mesh using Marching Cubes...");
+	start = clock();
+
+
+	thresh = 0;
 	//create surface and write to obj
 	CIsoSurface<float> builder;
 	builder.GenerateSurface(scalarField, thresh, (_X+border)*gridSize-1, (_Y+border)*gridSize-1, (_Z+border)*gridSize-1, 1, 1, 1);
@@ -1778,7 +1762,7 @@ void FluidCube3D::createBlobbySurface()
 	if(!builder.IsSurfaceValid())
 		system("pause");
 
-	char prefix[] = "surface3D/surface";
+	char prefix[] = "surface3D/flowIn/surface";
 	char suffix[] = ".obj";
 	char name[100];
 	sprintf_s(name, "%s%d%s", prefix, iteration, suffix);
@@ -1797,6 +1781,10 @@ void FluidCube3D::createBlobbySurface()
 		fout<< "f " <<builder.m_piTriangleIndices[i*3]+1<<' '<<builder.m_piTriangleIndices[i*3+1]+1<<' '<<builder.m_piTriangleIndices[i*3+2]+1<<std::endl;
 	}
 	fout.close();
+
+	timeCost = clock() - start;
+	std::cout<<"Finish Marching Cubes in "<<timeCost<<" ms"<<std::endl<<std::endl;
+	delete[] scalarField;
 }
 
 double FluidCube3D::blobbyKernel(double s2)

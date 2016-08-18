@@ -5,9 +5,9 @@
 
 //#define SIMULATION_2D 1
 //#define OBSTACLE 1
-//#define FLOW_IN 1
-//#define CREATEBLOBBY 1
-#define OUTPUT 1
+#define FLOW_IN 1
+#define CREATEBLOBBY 1
+//#define OUTPUT 1
 //#define GAUSS_SEIDEL 1
 
 
@@ -41,12 +41,13 @@
 	#define FRAMERATE 100
 	#define NUMPERGRID 4
 	#define GRAVITY 9.8
-	#define MYSCENE	DOUBLEDAM
+	#define MYSCENE	EMPTY
 	#define MYRENDER PARTICLE
 
 	#define IX(x, y, z) ((x) + (y)*(_X+2) + (z)*(_X+2)*(_Y+2) )
 	#define DISTANCE(x1, y1, z1, x2, y2, z2) ( sqrtf((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2) + (z1-z2)*(z1-z2)) )
 	#define DISTANCE2(x1, y1, z1, x2, y2, z2) ( (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2) + (z1-z2)*(z1-z2) )
+	#define BOUNDED(x, y, z) ( (x >= 1 && x <= _X && y >= 1 && y <= _Y && z >= 1 && z <= _Z)? true : false)
 
 #endif
 
