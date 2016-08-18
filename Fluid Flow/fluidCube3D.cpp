@@ -7,6 +7,7 @@
 #include <math.h>
 #include <ctime>
 #include <cstdio>
+#include <fstream>
 #include <Eigen\Eigen>
 
 extern float px;
@@ -922,8 +923,6 @@ void FluidCube3D::set_bnd()
 
 void FluidCube3D::simulate()
 {	
-	//while(true)
-	//{
 		bool draw = calculateTimeStep();
 	
 #ifdef FLOW_IN
@@ -939,10 +938,12 @@ void FluidCube3D::simulate()
 		vel_step();
 
 		if(draw)
+#ifdef CREATEBLOBBY
+			createBlobbySurface();
+#else
 			render();
-
+#endif
 		report();
-	//}
 }
 
 void FluidCube3D::output(float *u)
@@ -1165,12 +1166,14 @@ bool FluidCube3D::calculateTimeStep()
 	if(ctime + dt >= frameTime)
 	{
 		dt = frameTime - ctime;
+		totalTime += dt;
 		ctime = 0;
 		return true;
 	}
 	else
 	{
 		ctime += dt;
+		totalTime += dt;
 		return false;
 	}
 	//if(dt > h2 /(6*visc))
@@ -1681,25 +1684,26 @@ void FluidCube3D::addFlowIn()
 		}
 }
 
-void FluidCube3D::createBlobby()
+void FluidCube3D::createBlobbySurface()
 {
-	int gridSize = GRIDSIZE;
-	double r = 1.0 * gridSize / NUMPERGRID;
+	int gridSize = 20;
+	double r = 1.0 * GRIDSIZE / NUMPERGRID;
 	double h = 3 * r;
 	double h2i = 1 / (h*h);
 	double thresh = blobbyKernel( (r*r) / (h*h) );
 	
-	float *scalarField = new float [_X * _Y * _Z * gridSize * gridSize * gridSize]; 
+	int border = 6;
+	float *scalarField = new float [(_X+border) * (_Y+border) * (_Z+border) * gridSize * gridSize * gridSize]; 
 
-	for(int z = 0; z < _Z * gridSize; z++)
-		for(int y = 0; y < _Y * gridSize; y++)
-			for(int x = 0; x < _X * gridSize; x++)
+	for(int z = 0; z < (_Z+border) * gridSize; z++)
+		for(int y = 0; y < (_Y+border) * gridSize; y++)
+			for(int x = 0; x < (_X+border) * gridSize; x++)
 			{
-				int index = x + y * _X * gridSize + z * _X * gridSize * _Y * gridSize;
+				int index = x + y * (_X+border) * gridSize + z * (_X+border) * gridSize * (_Y+border) * gridSize;
 
-				int X = x / gridSize + 1;
-				int Y = y / gridSize + 1;
-				int Z = z / gridSize + 1;
+				int X = x / gridSize - border/2;
+				int Y = y / gridSize - border/2;
+				int Z = z / gridSize - border/2;
 
 				//origin blobby sited by Bridson
 				
@@ -1708,12 +1712,18 @@ void FluidCube3D::createBlobby()
 				std::vector<int> *list;
 				for(int i = 0; i < 27; i++)
 				{
-					list = invertedList[IX(X+dir2[i][0], Y+dir2[i][1], Z+dir2[i][2])];
+					int xx = X + dir2[i][0];
+					int yy = Y + dir2[i][1];
+					int zz = Z + dir2[i][2];
+					if(xx >= 1 && xx <=_X && yy >= 1 && yy <= _Y && zz >= 1 && zz <= _Z)
+						list = invertedList[IX(X+dir2[i][0], Y+dir2[i][1], Z+dir2[i][2])];
+					else
+						continue;
 					for(unsigned j = 0; j < list->size(); j++)
 					{
-						float x0 = (particles[list->at(j)].x-1) * gridSize;
-						float y0 = (particles[list->at(j)].y-1) * gridSize;
-						float z0 = (particles[list->at(j)].y-1) * gridSize;
+						float x0 = (particles[list->at(j)].x + border/2) * gridSize;
+						float y0 = (particles[list->at(j)].y + border/2) * gridSize;
+						float z0 = (particles[list->at(j)].z + border/2) * gridSize;
 						F += blobbyKernel(DISTANCE2(x0, y0 ,z0, x, y, z) * h2i);
 					}
 				}
@@ -1763,13 +1773,30 @@ void FluidCube3D::createBlobby()
 			}
 	//create surface and write to obj
 	CIsoSurface<float> builder;
-	builder.GenerateSurface(scalarField, thresh, _X*gridSize-1, _Y*gridSize-1, _Z*gridSize-1, 1, 1, 1);
+	builder.GenerateSurface(scalarField, thresh, (_X+border)*gridSize-1, (_Y+border)*gridSize-1, (_Z+border)*gridSize-1, 1, 1, 1);
 
+	if(!builder.IsSurfaceValid())
+		system("pause");
+
+	char prefix[] = "surface3D/surface";
+	char suffix[] = ".obj";
+	char name[100];
+	sprintf_s(name, "%s%d%s", prefix, iteration, suffix);
+	std::ofstream fout(name);
 	unsigned Nver = builder.m_nVertices;
 	unsigned Ntri = builder.m_nTriangles;
+	
+	fout<<"#  v "<<Nver<<" f "<<Ntri<<std::endl;
+	for(unsigned i = 0; i < Nver; i++)
+	{
+		fout << "v " <<builder.m_ppt3dVertices[i][0]<<' '<<builder.m_ppt3dVertices[i][1]<<' '<<builder.m_ppt3dVertices[i][2]<<std::endl;
+	}
 
-
-
+	for(unsigned i = 0; i < Ntri; i++)
+	{
+		fout<< "f " <<builder.m_piTriangleIndices[i*3]+1<<' '<<builder.m_piTriangleIndices[i*3+1]+1<<' '<<builder.m_piTriangleIndices[i*3+2]+1<<std::endl;
+	}
+	fout.close();
 }
 
 double FluidCube3D::blobbyKernel(double s2)
@@ -1780,5 +1807,14 @@ double FluidCube3D::blobbyKernel(double s2)
 		return 0;
 }
 
+void FluidCube3D::createBlobby(int frameNum)
+{
+	int frame = 0;
+	while(frame < frameNum)
+	{
+		simulate();
+		frame++;
+	}
+}
 
 #endif

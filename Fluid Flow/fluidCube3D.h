@@ -108,7 +108,7 @@ private:
 	Velo getVelosity(float x, float y, float z, float *vx, float *vy, float *vz);
 	Pos traceParticle(int index, int x, int y, int z, bool backward);
 	void addFlowIn();
-	void createBlobby();
+	void createBlobbySurface();
 	double blobbyKernel(double s2);
 
 	void errorRemove();
@@ -135,6 +135,7 @@ public:
 	~FluidCube3D();
 	void simulate();
 	void render();
+	void createBlobby(int);
 };
 
 #endif
