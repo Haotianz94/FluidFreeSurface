@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <fstream>
 #include <Eigen\Eigen>
+#include <omp.h>
 
 extern float px;
 extern float py;
@@ -1685,7 +1686,7 @@ void FluidCube3D::addFlowIn()
 
 void FluidCube3D::createBlobbySurface()
 {
-	int gridSize = 20;
+	int gridSize = 40;
 	double r = 1.0 * GRIDSIZE / NUMPERGRID;
 	double h = 3 * r;
 	double h2i = 1 / (h*h);
@@ -1697,6 +1698,7 @@ void FluidCube3D::createBlobbySurface()
 	PRINT("Start to sample the implict function on the grid...");
 	clock_t start = clock();
 
+#pragma omp parallel for
 	for(int z = 0; z < (_Z+border) * gridSize; z++)
 		for(int y = 0; y < (_Y+border) * gridSize; y++)
 			for(int x = 0; x < (_X+border) * gridSize; x++)
@@ -1709,17 +1711,17 @@ void FluidCube3D::createBlobbySurface()
 
 				if(BOUNDED(X,Y,Z) && type[IX(X, Y, Z)] == FLUID && neighNoneSolid[IX(X, Y, Z)] - neighAir[IX(X, Y, Z)] == 6)
 				{
-					//scalarField[index] = 2 * thresh;
-					scalarField[index] = -1;
+					scalarField[index] = 2 * thresh;
+					//scalarField[index] = -1;
 					continue;
 				}
 				
 				//origin blobby sited by Bridson
 				double F = 0;
 				//improved version by Zhu and Bridson
-				double Fai = -1;
-				Eigen::Vector3d Xu(0, 0, 0);
-				double ru = 0, F = 0;
+				//double Fai = -1;
+				//Eigen::Vector3d Xu(0, 0, 0);
+				//double ru = 0;
 				std::vector<int> *list;
 				for(int i = 0; i < 27; i++)
 				{
@@ -1735,17 +1737,18 @@ void FluidCube3D::createBlobbySurface()
 						float x0 = (particles[list->at(j)].x + border/2) * gridSize;
 						float y0 = (particles[list->at(j)].y + border/2) * gridSize;
 						float z0 = (particles[list->at(j)].z + border/2) * gridSize;
-						double ker = blobbyKernel(DISTANCE2(x0, y0, z0, x, y, z) * h2i);
-						Xu += ker * Eigen::Vector2d(x0, y0, z0);
-						ru += ker * r; //for simple use the average r, but the radii to the closest particle is better
-						F += ker;
+						F += blobbyKernel(DISTANCE2(x0, y0, z0, x, y, z) * h2i);
+						//double ker = blobbyKernel(DISTANCE2(x0, y0, z0, x, y, z) * h2i);
+						//Xu += ker * Eigen::Vector3d(x0, y0, z0);
+						//ru += ker * r; //for simple use the average r, but the radii to the closest particle is better
+						//F += ker;
 					}
 				}
-				//scalarField[index] = F;
+				scalarField[index] = F;
 
-				if(F > 0)
-					Fai = DISTANCE(x, y, z, Xu[0]/F, Xu[1]/F, Xu[2]/F) - ru/F;
-				scalarField[index] = Fai;
+				//if(F > 0)
+				//	Fai = DISTANCE(x, y, z, Xu[0]/F, Xu[1]/F, Xu[2]/F) - ru/F;
+				//scalarField[index] = Fai;
 			}
 	
 	clock_t timeCost = clock() - start;
@@ -1754,7 +1757,7 @@ void FluidCube3D::createBlobbySurface()
 	start = clock();
 
 
-	thresh = 0;
+	//thresh = 0;
 	//create surface and write to obj
 	CIsoSurface<float> builder;
 	builder.GenerateSurface(scalarField, thresh, (_X+border)*gridSize-1, (_Y+border)*gridSize-1, (_Z+border)*gridSize-1, 1, 1, 1);
@@ -1762,7 +1765,7 @@ void FluidCube3D::createBlobbySurface()
 	if(!builder.IsSurfaceValid())
 		system("pause");
 
-	char prefix[] = "surface3D/flowIn/surface";
+	char prefix[] = "surface3D/surface";
 	char suffix[] = ".obj";
 	char name[100];
 	sprintf_s(name, "%s%d%s", prefix, iteration, suffix);

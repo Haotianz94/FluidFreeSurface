@@ -9,6 +9,7 @@
 //#include "stdafx.h"
 #include <math.h>
 #include "CIsoSurface.h"
+//#include <omp.h>
 
 template <class T> const unsigned int CIsoSurface<T>::m_edgeTable[256] = {
 	0x0  , 0x109, 0x203, 0x30a, 0x406, 0x50f, 0x605, 0x70c,
@@ -346,7 +347,8 @@ template <class T> void CIsoSurface<T>::GenerateSurface(const T* ptScalarField, 
 	unsigned int nPointsInSlice = nPointsInXDirection*(m_nCellsY + 1);
 
 	// Generate isosurface.
-	for (unsigned int z = 0; z < m_nCellsZ; z++)
+//#pragma omp parallel for
+	for (int z = 0; z < m_nCellsZ; z++)
 		for (unsigned int y = 0; y < m_nCellsY; y++)
 			for (unsigned int x = 0; x < m_nCellsX; x++) {
 				// Calculate table lookup index from those
