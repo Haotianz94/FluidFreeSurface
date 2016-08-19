@@ -1686,7 +1686,10 @@ void FluidCube3D::addFlowIn()
 
 void FluidCube3D::createBlobbySurface()
 {
-	int gridSize = 40;
+	if(iteration != 100)
+		return;
+
+	int gridSize = 10;
 	double r = 1.0 * GRIDSIZE / NUMPERGRID;
 	double h = 3 * r;
 	double h2i = 1 / (h*h);

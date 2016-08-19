@@ -31,9 +31,9 @@
 	#define DISTANCE2(x1, y1, x2, y2) ( (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2) )
 
 #else
-	#define _X 10
-	#define _Y 10
-	#define _Z 10
+	#define _X 40
+	#define _Y 40
+	#define _Z 40
 	#define _L 1.0
 	#define GRIDSIZE 40
 	#define VISCOSITY 0.00001
