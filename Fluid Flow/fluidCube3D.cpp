@@ -106,7 +106,7 @@ FluidCube3D::FluidCube3D(float viscosity, float fr, SCENETYPE sc, RENDERTYPE rt)
 		int cx = _X/2;
 		int cy = _Y/2;
 		int cz = _Z/2;
-		float R = _X/6;
+		float R = _X/3;
 		for(int z = 1; z <= _Z; z++)
 			for(int y = 1; y <= _Y; y++)
 				for(int x = 1; x <= _X; x++)
@@ -120,15 +120,15 @@ FluidCube3D::FluidCube3D(float viscosity, float fr, SCENETYPE sc, RENDERTYPE rt)
 	//contain bottom
 	case CONTAINER:
 	{
-		/*
-		for(int z = _Z*3.0; z <= _Z*3.0/2; z++)
-			for(int y = _Y/2.0; y <= _Y/3.0; y++)
-				for(int x = _X/3.0; x <= _X/3.0*2; x++)
+		
+		for(int z = _Z/2.0-2; z <= _Z/2.0+2; z++)
+			for(int y = _Y/4.0+5; y <= _Y/4.0+10; y++)
+				for(int x = _X/2.0-2; x <= _X/2.0+2; x++)
 				{
 					originFluid ++;
 					fillParticleInGrid(x, y, z);
 				}
-		*/
+		
 
 		for(int z = 1; z <= _Z; z++)
 			for(int y = 1; y <= _Y/4.0; y++)
@@ -1668,25 +1668,29 @@ void FluidCube3D::report()
 
 void FluidCube3D::addFlowIn()
 {
+	
 	for(int z = _Z/2.0-1; z <= _Z/2.0+1; z++)
 		for(int x = _X/2.0-1; x <= _X/2.0+1; x++)
 		{
 			type[IX(x, _Y+1, z)] = type0[IX(x, _Y, z)] = FLOWIN;
 			fillParticleInGrid(x, _Y, z);
-			/*
-			for(int i = 0; i < nump; i++)
-			{
-				particles.push_back(Pos(1.01, y+i*step) );
-				velosities.push_back(Velo(0, 0));
-			}
-			*/
 			Vy[IX(x, _Y, z)] = Vy[IX(x, _Y+1, z)] = -2;
 		}
+	
+	/*
+	for(int y = _Y/2.0-1; y <= _Y/2.0+1; y++)
+		for(int x = _X/2.0-1; x <= _X/2.0+1; x++)
+		{
+			type[IX(x, y, 0)] = type0[IX(x, y, 0)] = FLOWIN;
+			fillParticleInGrid(x, y, 1);
+			Vz[IX(x, y, 0)] = Vz[IX(x, y, 1)] = 2;
+		}
+	*/
 }
 
 void FluidCube3D::createBlobbySurface()
 {
-	int gridSize = 40;
+	int gridSize = 20;
 	double r = 1.0 * GRIDSIZE / NUMPERGRID;
 	double h = 3 * r;
 	double h2i = 1 / (h*h);
@@ -1768,7 +1772,7 @@ void FluidCube3D::createBlobbySurface()
 	char prefix[] = "surface3D/surface";
 	char suffix[] = ".obj";
 	char name[100];
-	sprintf_s(name, "%s%d%s", prefix, iteration, suffix);
+	sprintf_s(name, "%s%03d%s", prefix, iteration, suffix);
 	std::ofstream fout(name);
 	unsigned Nver = builder.m_nVertices;
 	unsigned Ntri = builder.m_nTriangles;

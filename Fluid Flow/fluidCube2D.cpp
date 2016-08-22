@@ -709,6 +709,15 @@ void FluidCube2D::render()
 				glColor3f(0, 0.5, 0);
 			else if(type[IX(x, y)] == FLOWIN)
 				glColor3f(0, 0, 0.7);
+			else
+				continue;
+
+			glBegin(GL_QUADS);
+			glVertex2f(i*GRIDSIZE, j*GRIDSIZE);
+			glVertex2f((i+1)*GRIDSIZE, j*GRIDSIZE);
+			glVertex2f((i+1)*GRIDSIZE, (j+1)*GRIDSIZE);
+			glVertex2f(i*GRIDSIZE, (j+1)*GRIDSIZE);
+			glEnd();
 		}
 
 		//draw particles
