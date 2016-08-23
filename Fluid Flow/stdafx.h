@@ -6,7 +6,7 @@
 //#define SIMULATION_2D 1
 //#define OBSTACLE 1
 //#define FLOW_IN 1
-//#define CREATEBLOBBY 1
+#define CREATEBLOBBY 1
 //#define OUTPUT 1
 //#define GAUSS_SEIDEL 1
 
@@ -31,9 +31,9 @@
 	#define DISTANCE2(x1, y1, x2, y2) ( (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2) )
 
 #else
-	#define _X 20
-	#define _Y 20
-	#define _Z 20
+	#define _X 40
+	#define _Y 40
+	#define _Z 40
 	#define _L 1.0
 	#define GRIDSIZE 40
 	#define VISCOSITY 0.00001

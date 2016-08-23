@@ -4,6 +4,7 @@
 #include "freeglut.h"
 #include <vector>
 #include <Eigen/Eigen>
+#include <ctime>
 
 enum GRIDTYPE
 {
@@ -128,7 +129,7 @@ private:
 	//void draw_velo(int i, int j, float vx, float vy);
 
 	void output(float *u);
-	void report();
+	void report(clock_t);
 
 public:
 	FluidCube3D(float viscosity, float fr, SCENETYPE sc = CONTAINER, RENDERTYPE rt = PARTICLE);

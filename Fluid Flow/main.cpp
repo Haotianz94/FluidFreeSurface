@@ -19,7 +19,7 @@ int main(int argc, char* argv[])
 	PRINT("Exiting Program");
 #else
 	FluidCube3D *cube = new FluidCube3D(VISCOSITY, FRAMERATE, MYSCENE, MYRENDER);
-	cube->createBlobby(1000);
+	cube->createBlobby(68);
 
 #endif
 	return 0;

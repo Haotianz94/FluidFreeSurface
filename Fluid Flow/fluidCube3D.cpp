@@ -923,28 +923,32 @@ void FluidCube3D::set_bnd()
 }
 
 void FluidCube3D::simulate()
-{	
-		bool draw = calculateTimeStep();
+{
+	clock_t start = clock();
+
+	bool draw = calculateTimeStep();
 	
 #ifdef FLOW_IN
-		addFlowIn();
+	addFlowIn();
 #endif
 
-		updateParticles();
+	updateParticles();
 	
-		updateGrid();
+	updateGrid();
 	
-		set_bnd();
+	set_bnd();
 	
-		vel_step();
+	vel_step();
 
-		report();
+	clock_t simTime = clock() - start;
 
-		if(draw)
+	report(simTime);
+
+	if(draw)
 #ifdef CREATEBLOBBY
-			createBlobbySurface();
+		createBlobbySurface();
 #else
-			render();
+		render();
 #endif
 }
 
@@ -1649,7 +1653,7 @@ void FluidCube3D::fillParticleInGrid(int x, int y, int z)
 			}
 }
 
-void FluidCube3D::report()
+void FluidCube3D::report(clock_t simTime)
 {
 	REPORT(iteration);
 	REPORT(dt);
@@ -1662,6 +1666,7 @@ void FluidCube3D::report()
 	REPORT(fluidShrink);
 
 	REPORT(totalTime);
+	std::cout<<"Simulation finished in "<<simTime<<"ms"<<std::endl;
 	PRINT("======================================");
 	PRINT("");
 }
@@ -1690,9 +1695,12 @@ void FluidCube3D::addFlowIn()
 
 void FluidCube3D::createBlobbySurface()
 {
-	int gridSize = 20;
+	//if(iteration != 66)
+	//	return;
 
-	double r = 1.0 * GRIDSIZE / NUMPERGRID;
+	int gridSize = 10;
+
+	double r = 1.0 * gridSize / NUMPERGRID;
 	double h = 3 * r;
 	double h2i = 1 / (h*h);
 	double thresh = blobbyKernel( (r*r) / (h*h) );
@@ -1714,12 +1722,14 @@ void FluidCube3D::createBlobbySurface()
 				int Y = y / gridSize - border/2;
 				int Z = z / gridSize - border/2;
 
+				/*
 				if(BOUNDED(X,Y,Z) && type[IX(X, Y, Z)] == FLUID && neighNoneSolid[IX(X, Y, Z)] - neighAir[IX(X, Y, Z)] == 6)
 				{
 					scalarField[index] = 2 * thresh;
 					//scalarField[index] = -1;
 					continue;
 				}
+				*/
 				
 				//origin blobby sited by Bridson
 				double F = 0;
