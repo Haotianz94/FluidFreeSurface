@@ -67,6 +67,7 @@ private:
 	float max_vx;
 	float max_vy;
 	float max_vz;
+	float max_v;
 	float max_p;
 	
 	//Projection using Conjugate Gradient
@@ -101,6 +102,9 @@ private:
 	//Blobby
 	Eigen::Vector3i dir2[27];
 
+	//Extrapolate
+	int *layer;
+
 private:
 	bool calculateTimeStep();
 	void updateParticles();
@@ -111,6 +115,7 @@ private:
 	void addFlowIn();
 	void createBlobbySurface();
 	double blobbyKernel(double s2);
+	void extrapolate();
 
 	void errorRemove();
 	void fillParticleInGrid(int x, int y, int z);

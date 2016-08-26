@@ -32,6 +32,7 @@ FluidCube3D::FluidCube3D(float viscosity, float fr, SCENETYPE sc, RENDERTYPE rt)
 	max_vx = 0;
 	max_vy = 0;
 	max_vz = 0;
+	max_v = 0;
 	max_p = 0;
 
 	Vx = new float [size]; 
@@ -82,6 +83,11 @@ FluidCube3D::FluidCube3D(float viscosity, float fr, SCENETYPE sc, RENDERTYPE rt)
 		for(int j = 0; j < 3; j++)
 			for(int k = 0; k < 3; k++)
 				dir2[i + j*3 + k*9] = Eigen::Vector3i(i-1, j-1, k-1);
+
+	//Extrapolate
+	layer = new int [size];
+	for(int i = 0; i < size; i++)
+		layer[i] == -1;
 
 	//init fluid
 	//cube fall
@@ -266,6 +272,8 @@ void FluidCube3D::vel_step()
 	set_bnd();
 
 	projectVelosity();
+
+	extrapolate();
 	set_bnd();
 
 	//errorRemove();
@@ -1146,18 +1154,6 @@ bool FluidCube3D::calculateTimeStep()
 {
 	iteration ++;
 
-	float max_v;
-	if(max_vx > max_vy)
-		if(max_vx > max_vz)
-			max_v = max_vx;
-		else
-			max_v = max_vz;
-	else
-		if(max_vy > max_vz)
-			max_v = max_vy;
-		else
-			max_v = max_vz;
-
 	if(max_v == 0)
 		dt = frameTime;
 	else
@@ -1306,12 +1302,12 @@ void FluidCube3D::updateGrid()
 		for(int y = 1; y <= _Y; y++)
 			for(int x = 1; x <= _X; x++)
 			{
-				//if(type0[IX(x, y, z)] != SOLID)
 				if(type0[IX(x, y, z)] == AIR || type0[IX(x, y, z)] == FLUID)
 				{
 					type[IX(x, y, z)] = AIR;
 					invertedList[IX(x, y, z)]->clear();
 				}
+				layer[IX(x, y, z)] = -1;
 			}
 
 	for(unsigned i = 0; i < particles.size(); i++)
@@ -1320,6 +1316,7 @@ void FluidCube3D::updateGrid()
 		int y = int(particles[i].y);
 		int z = int(particles[i].z);
 		type[IX(x, y, z)] = FLUID;
+		layer[IX(x, y, z)] = 0;
 		invertedList[IX(x, y, z)]->push_back(i);
 	}
 	
@@ -1818,6 +1815,56 @@ void FluidCube3D::createBlobby(int frameNum)
 		simulate();
 		frame++;
 	}
+}
+
+void FluidCube3D::extrapolate()
+{
+	if(max_vx > max_vy)
+		if(max_vx > max_vz)
+			max_v = max_vx;
+		else
+			max_v = max_vz;
+	else
+		if(max_vy > max_vz)
+			max_v = max_vy;
+		else
+			max_v = max_vz;
+
+	//make sure all the fluid cell with layer = 0, others = -1
+	int iter = int(max_v * dt * hi) + 2;
+
+	REPORT(iter);
+	for(int k = 1; k <= iter; k++)
+		for(int z = 0; z < _Z; z++)
+			for(int y = 0; y < _Y; y++)
+				for(int x = 0; x < _X; x++)
+				{
+					if(type[IX(x, y, z)] == AIR && layer[IX(x, y, z)] == -1)
+					{
+						int nei = 0;
+						float velo[] = {0, 0, 0};
+						for(int j = 0; j < 6; j++)
+						{
+							int xx = x + dir[j][0];
+							int yy = y + dir[j][1];
+							int zz = z + dir[j][2];
+							if(layer[IX(xx, yy, zz)] == k-1)
+							{
+								nei ++;
+								velo[0] += Vx[IX(xx, yy, zz)];
+								velo[1] += Vy[IX(xx, yy, zz)];
+								velo[2] += Vz[IX(xx, yy, zz)];
+							}
+						}
+						if(nei > 0)
+						{
+							Vx[IX(x, y, z)] = velo[0] / nei;
+							Vy[IX(x, y, z)] = velo[1] / nei;
+							Vz[IX(x, y, z)] = velo[2] / nei;
+							layer[IX(x, y, z)] = k;
+						}
+					}
+				}
 }
 
 #endif
