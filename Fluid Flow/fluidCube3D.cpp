@@ -91,10 +91,12 @@ FluidCube3D::FluidCube3D(float viscosity, float fr, SCENETYPE sc, RENDERTYPE rt)
 
 	//init fluid
 	//cube fall
+	srand(time(0));
 	originFluid = 0;
 	fluidNum = 0;
 	switch(scene)
 	{
+	//cube fall
 	case CUBEFALL:
 	{
 		for(int z = _Z/3.0; z <= _Z/3.0*2; z++)
@@ -1631,17 +1633,16 @@ void FluidCube3D::errorRemove()
 
 void FluidCube3D::fillParticleInGrid(int x, int y, int z)
 {
-	srand(time(0));
 	int nump = NUMPERGRID;
-	int sample = 50;
-	float step = 1.0 / nump;
+	int sample = 10000;
+	float subSize = 1.0 / nump;
 	for(int i = 0; i < nump; i++)
 		for(int j = 0; j < nump; j++)
 			for(int k = 0; k < nump; k++)
 			{
-				float x0 = 1.0f * (rand()%sample) / sample;
-				float y0 = 1.0f * (rand()%sample) / sample;
-				float z0 = 1.0f * (rand()%sample) / sample;
+				float x0 = subSize * (rand()%sample) / sample + i * subSize;
+				float y0 = subSize * (rand()%sample) / sample + j * subSize;
+				float z0 = subSize * (rand()%sample) / sample + k * subSize;
 				//float x0 = i * step;
 				//float y0 = j * step;
 				//float z0 = k * step;
@@ -1835,9 +1836,27 @@ void FluidCube3D::extrapolate()
 
 	REPORT(iter);
 	for(int k = 1; k <= iter; k++)
-		for(int z = 0; z < _Z; z++)
-			for(int y = 0; y < _Y; y++)
-				for(int x = 0; x < _X; x++)
+	{
+		int start[3], end[3], du[3];
+		int maxu[3] = {_X, _Y, _Z};
+		for(int i = 0; i < 3; i++)
+		{
+			du[i] = (rand() % 2 == 0)? 1 : -1;
+			if(du[i] > 0)
+			{
+				start[i] = 0;
+				end[i] = maxu[i];
+			}
+			else
+			{
+				start[i] = maxu[i]-1;
+				end[i] = -1;
+			}
+		}
+
+		for(int z = start[2]; z != end[2]; z += du[2])
+			for(int y = start[1]; y != end[1]; y += du[1])
+				for(int x = start[0]; x != end[0]; x += du[0])
 				{
 					if(type[IX(x, y, z)] == AIR && layer[IX(x, y, z)] == -1)
 					{
@@ -1865,6 +1884,7 @@ void FluidCube3D::extrapolate()
 						}
 					}
 				}
+	}
 }
 
 #endif

@@ -107,11 +107,12 @@ FluidCube2D::FluidCube2D(float viscosity, float fr, SCENETYPE sc, RENDERTYPE rt)
 	dir2[8] = Eigen::Vector2i(-1, -1);
 
 	//init fluid
-	//cube fall
+	srand(time(0));
 	originFluid = 0;
 	fluidNum = 0;
 	switch(scene)
 	{
+	//cube fall
 	case CUBEFALL:
 	{
 		for(int y = _H/4.0; y <= _H/2.0; y++)
@@ -1374,15 +1375,14 @@ void FluidCube2D::errorRemove()
 
 void FluidCube2D::fillParticleInGrid(int x, int y)
 {
-	srand(time(0));
 	int nump = NUMPERGRID;
-	int sample = 50;
-	float step = 1.0 / nump;
+	int sample = 10000;
+	float subSize = 1.0 / nump;
 	for(int i = 0; i < nump; i++)
 		for(int j = 0; j < nump; j++)
 		{
-			float x0 = 1.0f * (rand()%sample) / sample;
-			float y0 = 1.0f * (rand()%sample) / sample;
+			float x0 = subSize * (rand()%sample) / sample + i * subSize;
+			float y0 = subSize * (rand()%sample) / sample + j * subSize;
 			particles.push_back(Pos(x+x0, y+y0) );
 			velosities.push_back(Velo(0, 0));
 		}
