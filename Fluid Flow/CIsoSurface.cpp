@@ -348,7 +348,7 @@ template <class T> void CIsoSurface<T>::GenerateSurface(const T* ptScalarField, 
 
 	// Generate isosurface.
 //#pragma omp parallel for
-	for (int z = 0; z < m_nCellsZ; z++)
+	for (unsigned int z = 0; z < m_nCellsZ; z++)
 		for (unsigned int y = 0; y < m_nCellsY; y++)
 			for (unsigned int x = 0; x < m_nCellsX; x++) {
 				// Calculate table lookup index from those
