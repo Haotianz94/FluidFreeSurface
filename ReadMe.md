@@ -1,0 +1,48 @@
+#FluidFreeSurface
+A Demo for Fluid Simulation with Free Surface
+
+##Features
+ * Based on the Marker-And-Cell (MAC) method
+ * Used staggered MAC grid
+ * Free surface presented
+ * Supported both 2D and 3D
+ * Used Blobby and Marching Cubes for creating surface mesh
+ * Used freeglut (alternative to OpenGL) for real-time rendering
+ * Used Raytracing in Maya 2015 for non real-time rendering
+ * Programed using C++
+ 
+##Algorithm Framework
+
+###For each iteration:
+
+###Calculate the simulation time step
+###Update the particles¡¯ position according to the current velocity field
+###Update each cell type as fluid or air according to whether it contains particles
+###Set boundary conditions for new fluid cells
+###Update current velocity field based on the Navier-Strokes Equations
+ * Apply advection using "semi- Lagrangian" method
+ * Apply external forces
+ * Apply viscosity using Gauss-Seidel Relaxtion (diffusion)
+ * Apply the press projection by solving a liner system
+ * Extrapolate fluid velocities into nearby air cells
+ * Set boundary conditions for solid cells and cells on the free surface
+  
+##References
+[Blinn J., ¡°A Generalization of Algebraic Surface Drawing,¡± ACM Trans. Graph., 1982.]
+(http://dcgi.felk.cvut.cz/home/havran/DISSVH/dissvh.pdf)
+
+[Welch J. E., Harlow F. H., Shannon J.
+P., and Daly B. J., ¡°THE MAC METHOD a computing
+technique for solving viscous, incompressible, transient
+fluid-flow problems involving free surfaces,¡± Report
+LA-3425, Los Alamos Scientific Laboratory, 1965.]
+()
+
+[Mark C., Greg T. and Peter M., ¡°Rigid, Melting, and Flowing Fluid,¡± Doctoral Dissertation, 2004.]
+()
+
+[Bridson R., ¡°Fluid Simulation for Computer Graphics¡±, CRC Press, 2008.]
+()
+
+##Links
+[Detailed description on my homepage](http://zhanghaotian1994.com/projects/FluidFreeSurface/)
