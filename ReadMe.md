@@ -13,13 +13,13 @@ A Demo for Fluid Simulation with Free Surface
  
 ##Algorithm Framework
 
-###For each iteration:
+For each iteration:
 
-###Calculate the simulation time step
-###Update the particles¡¯ position according to the current velocity field
-###Update each cell type as fluid or air according to whether it contains particles
-###Set boundary conditions for new fluid cells
-###Update current velocity field based on the Navier-Strokes Equations
+Calculate the simulation time step   
+Update the particles¡¯ position according to the current velocity field  
+Update each cell type as fluid or air according to whether it contains particles  
+Set boundary conditions for new fluid cells     
+Update current velocity field based on the Navier-Strokes Equations
  * Apply advection using "semi- Lagrangian" method
  * Apply external forces
  * Apply viscosity using Gauss-Seidel Relaxtion (diffusion)
