@@ -3,25 +3,25 @@
 
 #include <iostream>
 
-#define SIMULATION_2D 1
-//#define OBSTACLE 1
-//#define FLOW_IN 1
+//#define SIMULATION_2D 1
+#define OBSTACLE 1
+#define FLOW_IN 1
 //#define CREATEBLOBBY 1
 //#define OUTPUT 1
 //#define GAUSS_SEIDEL 1
 
 
 #ifdef SIMULATION_2D
-	#define _W 60
-	#define _H 60
+	#define _W 100
+	#define _H 100
 	#define _L 1.0
- 	#define GRIDSIZE 10
+ 	#define GRIDSIZE 6
 	#define VISCOSITY 0.0001
 	#define ITERATION 30
 	#define FRAMERATE 200
 	#define NUMPERGRID 5
 	#define GRAVITY 9.8
-	#define MYSCENE DOUBLEDAM
+	#define MYSCENE SPHEREFALL
 	#define MYRENDER PARTICLE
 
 	#define IX(x, y) ( (x) + (y) * (_W+2) )
@@ -31,17 +31,17 @@
 	#define DISTANCE2(x1, y1, x2, y2) ( (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2) )
 
 #else
-	#define _X 20
-	#define _Y 20
-	#define _Z 20
+	#define _X 15
+	#define _Y 15
+	#define _Z 15
 	#define _L 1.0
 	#define GRIDSIZE 40
 	#define VISCOSITY 0.00001
 	#define ITERATION 30
 	#define FRAMERATE 100
-	#define NUMPERGRID 4
+	#define NUMPERGRID 6
 	#define GRAVITY 9.8
-	#define MYSCENE	SPHEREFALL
+	#define MYSCENE	EMPTY
 	#define MYRENDER PARTICLE
 
 	#define IX(x, y, z) ((x) + (y)*(_X+2) + (z)*(_X+2)*(_Y+2) )

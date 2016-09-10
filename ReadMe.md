@@ -29,20 +29,20 @@ A Demo for Fluid Simulation with Free Surface
   
 ##References
 [Blinn J., ¡°A Generalization of Algebraic Surface Drawing,¡± ACM Trans. Graph., 1982.]
-(http://dcgi.felk.cvut.cz/home/havran/DISSVH/dissvh.pdf)
+(https://www.microsoft.com/en-us/research/wp-content/uploads/1982/07/p235-blinn.pdf)
 
 [Welch J. E., Harlow F. H., Shannon J.
 P., and Daly B. J., ¡°THE MAC METHOD a computing
 technique for solving viscous, incompressible, transient
 fluid-flow problems involving free surfaces,¡± Report
 LA-3425, Los Alamos Scientific Laboratory, 1965.]
-()
+(http://www.cs.rpi.edu/~cutler/classes/advancedgraphics/S13/papers/harlow_welch.pdf)
 
 [Mark C., Greg T. and Peter M., ¡°Rigid, Melting, and Flowing Fluid,¡± Doctoral Dissertation, 2004.]
-()
+(http://www.eng.utah.edu/~cs6660/carlsonthesis.pdf)
 
 [Bridson R., ¡°Fluid Simulation for Computer Graphics¡±, CRC Press, 2008.]
-()
+(https://www.cs.ubc.ca/~rbridson/fluidsimulation/fluids_notes.pdf)
 
 ##Links
 [Detailed description on my homepage](http://zhanghaotian1994.com/projects/FluidFreeSurface/)

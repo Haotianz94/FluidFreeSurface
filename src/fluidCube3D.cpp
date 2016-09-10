@@ -1671,7 +1671,7 @@ void FluidCube3D::report(clock_t simTime)
 
 void FluidCube3D::addFlowIn()
 {
-	/*
+	
 	for(int z = _Z/2.0-1; z <= _Z/2.0+1; z++)
 		for(int x = _X/2.0-1; x <= _X/2.0+1; x++)
 		{
@@ -1679,9 +1679,9 @@ void FluidCube3D::addFlowIn()
 			fillParticleInGrid(x, _Y, z);
 			Vy[IX(x, _Y, z)] = Vy[IX(x, _Y+1, z)] = -2;
 		}
-	*/
 	
 	
+	/*
 	for(int y = _Y/2.0-1; y <= _Y/2.0+1; y++)
 		for(int x = _X/2.0-1; x <= _X/2.0+1; x++)
 		{
@@ -1689,7 +1689,7 @@ void FluidCube3D::addFlowIn()
 			fillParticleInGrid(x, y, 1);
 			Vz[IX(x, y, 0)] = Vz[IX(x, y, 1)] = 2;
 		}
-	
+	*/
 }
 
 void FluidCube3D::createBlobbySurface()
