@@ -15,11 +15,11 @@ A Demo for Fluid Simulation with Free Surface
 
 For each iteration:
 
-Calculate the simulation time step   
-Update the particles¡¯ position according to the current velocity field  
-Update each cell type as fluid or air according to whether it contains particles  
-Set boundary conditions for new fluid cells     
-Update current velocity field based on the Navier-Strokes Equations
+1. Calculate the simulation time step   
+2. Update the particles¡¯ position according to the current velocity field  
+3. Update each cell type as fluid or air according to whether it contains particles  
+4. Set boundary conditions for new fluid cells     
+5. Update current velocity field based on the Navier-Strokes Equations
  * Apply advection using "semi- Lagrangian" method
  * Apply external forces
  * Apply viscosity using Gauss-Seidel Relaxtion (diffusion)
@@ -28,20 +28,20 @@ Update current velocity field based on the Navier-Strokes Equations
  * Set boundary conditions for solid cells and cells on the free surface
   
 ##References
-[Blinn J., ¡°A Generalization of Algebraic Surface Drawing,¡± ACM Trans. Graph., 1982.]
+[Blinn J., "A Generalization of Algebraic Surface Drawing," ACM Trans. Graph., 1982.]
 (https://www.microsoft.com/en-us/research/wp-content/uploads/1982/07/p235-blinn.pdf)
 
 [Welch J. E., Harlow F. H., Shannon J.
-P., and Daly B. J., ¡°THE MAC METHOD a computing
+P., and Daly B. J., "THE MAC METHOD a computing
 technique for solving viscous, incompressible, transient
-fluid-flow problems involving free surfaces,¡± Report
+fluid-flow problems involving free surfaces," Report
 LA-3425, Los Alamos Scientific Laboratory, 1965.]
 (http://www.cs.rpi.edu/~cutler/classes/advancedgraphics/S13/papers/harlow_welch.pdf)
 
-[Mark C., Greg T. and Peter M., ¡°Rigid, Melting, and Flowing Fluid,¡± Doctoral Dissertation, 2004.]
+[Mark C., Greg T. and Peter M., "Rigid, Melting, and Flowing Fluid," Doctoral Dissertation, 2004.]
 (http://www.eng.utah.edu/~cs6660/carlsonthesis.pdf)
 
-[Bridson R., ¡°Fluid Simulation for Computer Graphics¡±, CRC Press, 2008.]
+[Bridson R., "Fluid Simulation for Computer Graphics", CRC Press, 2008.]
 (https://www.cs.ubc.ca/~rbridson/fluidsimulation/fluids_notes.pdf)
 
 ##Links
