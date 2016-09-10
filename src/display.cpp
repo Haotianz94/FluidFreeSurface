@@ -231,5 +231,6 @@ void timer(int value) {
 		cube->simulate();
 	else
 		cube->render();
+
 	glutTimerFunc(0, timer, 0); // next timer call milliseconds later
 }

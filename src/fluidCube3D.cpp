@@ -1680,7 +1680,6 @@ void FluidCube3D::addFlowIn()
 			Vy[IX(x, _Y, z)] = Vy[IX(x, _Y+1, z)] = -2;
 		}
 	
-	
 	/*
 	for(int y = _Y/2.0-1; y <= _Y/2.0+1; y++)
 		for(int x = _X/2.0-1; x <= _X/2.0+1; x++)
