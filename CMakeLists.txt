@@ -6,19 +6,13 @@ SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GCC_COVERAGE_COMPILE_FLAGS}" )
 PROJECT(fluid_simulation)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${fluid_simulation_SOURCE_DIR}/bin)
 
-
 SET(PROJECT_HEADER
-#        ${PROJECT_SOURCE_DIR}/include/freeglut/freeglut.h
-#        ${PROJECT_SOURCE_DIR}/include/freeglut/freeglut_ext.h
-#        ${PROJECT_SOURCE_DIR}/include/freeglut/freeglut_std.h
         ${PROJECT_SOURCE_DIR}/include/CIsoSurface.h
         ${PROJECT_SOURCE_DIR}/include/Vectors.h
         ${PROJECT_SOURCE_DIR}/include/stdafx.h
         ${PROJECT_SOURCE_DIR}/include/display.h
         ${PROJECT_SOURCE_DIR}/include/fluidCube2D.h
         ${PROJECT_SOURCE_DIR}/include/fluidCube3D.h)
-#        ${PROJECT_SOURCE_DIR}/include/Configer.h
-#        ${PROJECT_SOURCE_DIR}/include/Logger.h)
 
 SET(PROJECT_SRC
         ${PROJECT_SOURCE_DIR}/src/CIsoSurface.cpp
@@ -28,12 +22,13 @@ SET(PROJECT_SRC
         ${PROJECT_SOURCE_DIR}/src/fluidCube3D.cpp
         ${PROJECT_SOURCE_DIR}/src/main.cpp)
 
+INCLUDE_DIRECTORIES(include)
 
 ADD_EXECUTABLE(fluid_simulation ${PROJECT_HEADER} ${PROJECT_SRC})
 
-
-INCLUDE_DIRECTORIES(include)
-  
+# Eigen
+FIND_PACKAGE(Eigen3 3.3 REQUIRED NO_MODULE)
+target_link_libraries (fluid_simulation Eigen3::Eigen)
 
 # opencv
 FIND_PACKAGE(OpenCV REQUIRED)
