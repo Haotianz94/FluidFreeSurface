@@ -1706,8 +1706,8 @@ void FluidCube3D::addFlowIn()
 
 void FluidCube3D::createBlobbySurface()
 {
-	if(iteration != 30)
-		return;
+	// if(iteration != 30)
+	// 	return;
 
 	int gridSize = 10;
 
@@ -1791,7 +1791,7 @@ void FluidCube3D::createBlobbySurface()
 	if(!builder.IsSurfaceValid())
 		system("pause");
 
-	char prefix[] = "surface3D/surface";
+	char prefix[] = "../surface3D/surface";
 	char suffix[] = ".obj";
 	char name[100];
 	sprintf(name, "%s%03d%s", prefix, iteration, suffix);
