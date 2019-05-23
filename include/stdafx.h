@@ -3,9 +3,9 @@
 
 #include <iostream>
 
-// #define SIMULATION_2D 1
-#define OBSTACLE 1
-#define FLOW_IN 1
+#define SIMULATION_2D 1
+// #define OBSTACLE 1
+// #define FLOW_IN 1
 //#define CREATEBLOBBY 1
 //#define OUTPUT 1
 //#define GAUSS_SEIDEL 1

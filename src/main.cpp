@@ -2,9 +2,14 @@
 #include "fluidCube3D.h"
 #include "display.h"
 #include <fstream>
+#include <Eigen/Core>
+#include <omp.h>
 
 int main(int argc, char* argv[])
 {
+	omp_set_num_threads(16);
+	Eigen::setNbThreads(16);
+	Eigen::initParallel();
 
 #ifndef CREATEBLOBBY
 	PRINT("Program Starting");
@@ -23,5 +28,3 @@ int main(int argc, char* argv[])
 #endif
 	return 0;
 }
-//1.  h2;  1/ dt
-//2.  Store A

@@ -279,6 +279,7 @@ void FluidCube2D::vel_step()
 
 void FluidCube2D::addForce()
 {
+#pragma omp parallel for
 	for(int y = 1; y <= _H; y++)
 		for(int x = 1; x <= _W; x++)
 			if(type[IX(x, y)] == FLUID)
@@ -343,7 +344,8 @@ void FluidCube2D::projectVelosity()
 				if(type[IX(x, y)] == FLUID)
 					p[IX(x, y)] = (div[IX(x,y)] + p[IX(x,y)] + p[IX(x+1,y)] + p[IX(x,y)] + p[IX(x,y+1)]) / 4;
 	}
- 
+
+#pragma omp parallel for
 	for(int y = 1; y <= _H; y++)
 		for(int x = 1; x <= _W; x++)
 		{
@@ -396,6 +398,8 @@ void FluidCube2D::projectVelosity()
 	*/
 	Eigen::VectorXd b(fluidNum);
 	int index = 0;
+
+// #pragma omp parallel for (cannot be parallel)
 	for(int y = 1; y <= _H; y++)
 		for(int x = 1; x <= _W; x++)
 		{
@@ -415,6 +419,7 @@ void FluidCube2D::projectVelosity()
 		if(p[i] > max_p)
 			max_p = p[i];
 
+#pragma omp parallel for
 	for(int y = 1; y <= _H; y++)
 		for(int x = 1; x <= _W; x++)
 		{
@@ -483,6 +488,7 @@ void FluidCube2D::diffuse(int b, float *u0, float *u, float diffusion)
 	*/
 
 	//can also try unstable way
+#pragma omp parallel for
 	for(int y = 1; y <= _H; y++)
 		for(int x = 1; x <= _W; x++)
 			if(type[IX(x, y)] == FLUID)
@@ -503,6 +509,7 @@ void FluidCube2D::diffuse(int b, float *u0, float *u, float diffusion)
 
 void FluidCube2D::advect(int b, float *u0, float *u,  bool backward)
 {
+#pragma omp parallel for
 	for(int y = 1; y <= _H; y++)
 		for(int x = 1; x <= _W; x++)
 		{
@@ -530,6 +537,7 @@ void FluidCube2D::set_bnd()
 		Vy[IX(x, _H+1)] = -Vy[IX(x, _H)];
 	}
 	*/
+#pragma omp parallel for
 	for(int y = 1; y <= _H; y++)
 		for(int x = 1; x <= _W; x++)
 		{
@@ -687,6 +695,7 @@ void FluidCube2D::render()
 	//calculate divergence
 	if(renderType == DIVERGENCE)
 	{
+#pragma omp parallel for
 		for(int y = 1; y <= _H; y++)
 			for(int x = 1; x <= _W; x++)
 			{
@@ -1078,6 +1087,7 @@ void FluidCube2D::updateGrid()
 	type = type0;
 	type0 = tmp;
 
+#pragma omp parallel for
 	for(int y = 1; y <= _H; y++)
 		for(int x = 1; x <= _W; x++)
 		{
@@ -1099,11 +1109,14 @@ void FluidCube2D::updateGrid()
 	fluidNum = 0;
 	for(int i = 0; i < size; i++)
 		pos2index[i] = -1;
+
+// #pragma omp parallel for (cannot be parallel)
 	for(int y = 1; y <= _H; y++)
 		for(int x = 1; x <= _W; x++)
 			if(type[IX(x,y)] == FLUID)
 				pos2index[IX(x, y)] = fluidNum++;
 
+#pragma omp parallel for
 	for(int y = 1; y <= _H; y++)
 		for(int x = 1; x <= _W; x++)
 		{
@@ -1248,6 +1261,7 @@ void FluidCube2D::updateGrid()
 
 
 	//init Matrix
+// #pragma omp parallel for (cannot be parallel)
 	A = Eigen::SparseMatrix<double>(fluidNum, fluidNum);         // default is column major
 	A.reserve(Eigen::VectorXi::Constant(fluidNum, 5));
 	int index = 0;

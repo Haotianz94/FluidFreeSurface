@@ -351,6 +351,7 @@ void FluidCube3D::projectVelosity()
 										  + p[IX(x,y,z-1)] + p[IX(x,y,z+1)]) / 6;
 	}
 
+#pragma omp parallel for
 	for(int z = 1; z <= _Z; z++)
 		for(int y = 1; y <= _Y; y++)
 			for(int x = 1; x <= _X; x++)
@@ -411,6 +412,8 @@ void FluidCube3D::projectVelosity()
 	*/
 	Eigen::VectorXd b(fluidNum);
 	int index = 0;
+
+// #pragma omp parallel for (cannot be parallel)
 	for(int z = 1; z <= _Z; z++)
 		for(int y = 1; y <= _Y; y++)
 			for(int x = 1; x <= _X; x++)
@@ -431,6 +434,7 @@ void FluidCube3D::projectVelosity()
 		if(p[i] > max_p)
 			max_p = p[i];
 
+#pragma omp parallel for
 	for(int z = 1; z <= _Z; z++)
 		for(int y = 1; y <= _Y; y++)
 			for(int x = 1; x <= _X; x++)
@@ -512,6 +516,7 @@ void FluidCube3D::diffuse(int b, float *u0, float *u, float diffusion)
 	*/
 
 	//can also try unstable way
+#pragma omp parallel for
 	for(int z = 1; z <= _Z; z++)
 		for(int y = 1; y <= _Y; y++)
 			for(int x = 1; x <= _X; x++)
@@ -533,6 +538,7 @@ void FluidCube3D::diffuse(int b, float *u0, float *u, float diffusion)
 
 void FluidCube3D::advect(int b, float *u0, float *u,  bool backward)
 {
+#pragma omp parallel for
 	for(int z = 1; z <= _Z; z++)
 		for(int y = 1; y <= _Y; y++)
 			for(int x = 1; x <= _X; x++)
@@ -558,6 +564,7 @@ void FluidCube3D::set_bnd()
 		Vy[IX(x, _Y+1)] = -Vy[IX(x, _Y)];
 	}
 	*/
+#pragma omp parallel for
 	for(int z = 1; z <= _Z; z++)
 		for(int y = 1; y <= _Y; y++)
 			for(int x = 1; x <= _X; x++)
@@ -1002,6 +1009,7 @@ void FluidCube3D::render()
 	//calculate divergence
 	if(renderType == DIVERGENCE)
 	{
+#pragma omp parallel for
 		for(int z = 1; z <= _Z; z++)
 			for(int y = 1; y <= _Y; y++)
 				for(int x = 1; x <= _X; x++)
@@ -1015,6 +1023,7 @@ void FluidCube3D::render()
 
 	glTranslatef(-LENGTH/2, -LENGTH/2, -LENGTH/2);
 
+// #pragma omp parallel for (cannot make rendering parallel)
 	for(int k = 0; k < _Z; k++)	
 		for(int j = 0; j < _Y; j++)
 			for(int i = 0; i < _X; i++)
@@ -1299,6 +1308,7 @@ void FluidCube3D::updateGrid()
 	type = type0;
 	type0 = tmp;
 
+#pragma omp parallel for
 	for(int z = 1; z <= _Z; z++)
 		for(int y = 1; y <= _Y; y++)
 			for(int x = 1; x <= _X; x++)
@@ -1324,12 +1334,15 @@ void FluidCube3D::updateGrid()
 	fluidNum = 0;
 	for(int i = 0; i < size; i++)
 		pos2index[i] = -1;
+
+// #pragma omp parallel for (this loop cannot be paralleled)
 	for(int z = 1; z <= _Z; z++)
 		for(int y = 1; y <= _Y; y++)
 			for(int x = 1; x <= _X; x++)
 				if(type[IX(x, y, z)] == FLUID)
 					pos2index[IX(x, y, z)] = fluidNum++;
 
+#pragma omp parallel for
 	for(int z = 1; z <= _Z; z++)
 		for(int y = 1; y <= _Y; y++)
 			for(int x = 1; x <= _X; x++)
@@ -1491,6 +1504,7 @@ void FluidCube3D::updateGrid()
 	A = Eigen::SparseMatrix<double>(fluidNum, fluidNum);         // default is column major
 	A.reserve(Eigen::VectorXi::Constant(fluidNum, 7));
 	int index = 0;
+// #pragma omp parallel for (cannot be parallel)
 	for(int z = 1; z <= _Z; z++)
 		for(int y = 1; y <= _Y; y++)
 			for(int x = 1; x <= _X; x++)
@@ -1837,6 +1851,7 @@ void FluidCube3D::extrapolate()
 	int iter = int(max_v * dt * hi) + 2;
 
 	REPORT(iter);
+#pragma omp parallel for
 	for(int k = 1; k <= iter; k++)
 	{
 		int start[3], end[3], du[3];
@@ -1855,7 +1870,6 @@ void FluidCube3D::extrapolate()
 				end[i] = -1;
 			}
 		}
-
 		for(int z = start[2]; z != end[2]; z += du[2])
 			for(int y = start[1]; y != end[1]; y += du[1])
 				for(int x = start[0]; x != end[0]; x += du[0])
