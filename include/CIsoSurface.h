@@ -111,7 +111,7 @@ private:
 
 	// Lookup tables used in the construction of the isosurface.
 	static const unsigned int m_edgeTable[256];
-	static const unsigned int m_triTable[256][16];
+	static const int m_triTable[256][16];
 };
 #endif // CISOSURFACE_H
 

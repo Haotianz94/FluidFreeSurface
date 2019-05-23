@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "fluidCube3D.h"
 #include "display.h"
-#include <Eigen\Eigen>
 #include <fstream>
 
 int main(int argc, char* argv[])

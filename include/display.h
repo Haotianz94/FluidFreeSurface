@@ -3,7 +3,7 @@
 #ifndef GLTEMPLATE_DISPLAY_H_
 #define GLTEMPLATE_DISPLAY_H_
 
-#include "freeglut.h"
+#include <GL/freeglut.h>
 
 void initialize();
 

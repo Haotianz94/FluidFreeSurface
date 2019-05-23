@@ -6,7 +6,6 @@
 #include <math.h>
 #include <ctime>
 #include <cstdio>
-#include <Eigen\Eigen>
 
 FluidCube2D::FluidCube2D(float viscosity, float fr, SCENETYPE sc, RENDERTYPE rt)
 {

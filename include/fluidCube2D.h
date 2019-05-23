@@ -1,9 +1,9 @@
 #ifndef _FLUIDCUBE2D_H_
 #define _FLUIDCUBE2D_H_
 
-#include "freeglut.h"
-#include <vector>
+#include <GL/freeglut.h>
 #include <Eigen/Eigen>
+#include <vector>
 
 enum GRIDTYPE
 {

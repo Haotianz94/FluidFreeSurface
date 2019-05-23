@@ -8,7 +8,6 @@
 #include <ctime>
 #include <cstdio>
 #include <fstream>
-#include <Eigen\Eigen>
 #include <omp.h>
 
 extern float px;
@@ -1781,7 +1780,7 @@ void FluidCube3D::createBlobbySurface()
 	char prefix[] = "surface3D/surface";
 	char suffix[] = ".obj";
 	char name[100];
-	sprintf_s(name, "%s%03d%s", prefix, iteration, suffix);
+	sprintf(name, "%s%03d%s", prefix, iteration, suffix);
 	std::ofstream fout(name);
 	unsigned Nver = builder.m_nVertices;
 	unsigned Ntri = builder.m_nTriangles;

@@ -16,7 +16,7 @@ float pz = ll * cosf(seita) * sinf(fai);
 #endif
 
 int wide, height;
-bool pause = false;
+bool sim_pause = false;
 
 void initialize(){
 
@@ -119,7 +119,7 @@ void keyEvent(unsigned char _key, int _x, int _y){
 			exit(0);
 			break;
 		case 'e':
-			pause = !pause;
+			sim_pause = !sim_pause;
 			break;
 
 #ifndef SIMULATION_2D
@@ -227,7 +227,7 @@ void refresh(){
 
 void timer(int value) {	
 
-	if(!pause)
+	if(!sim_pause)
 		cube->simulate();
 	else
 		cube->render();
