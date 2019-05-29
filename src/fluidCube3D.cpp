@@ -1684,24 +1684,32 @@ void FluidCube3D::report(clock_t simTime)
 
 void FluidCube3D::addFlowIn()
 {
+	// fulid come from top 
+	// for(int z = _Z/2.0-1; z <= _Z/2.0+1; z++)
+	// 	for(int x = _X/2.0-1; x <= _X/2.0+1; x++)
+	// 	{
+	// 		type[IX(x, _Y+1, z)] = type0[IX(x, _Y, z)] = FLOWIN;
+	// 		fillParticleInGrid(x, _Y, z);
+	// 		Vy[IX(x, _Y, z)] = Vy[IX(x, _Y+1, z)] = -2;
+	// 	}
 	
-	for(int z = _Z/2.0-1; z <= _Z/2.0+1; z++)
-		for(int x = _X/2.0-1; x <= _X/2.0+1; x++)
+	// fluid come from side
+	// for(int y = _Y/2.0 - 5; y <= _Y/2.0 + 5; y++)
+	// 	for(int x = _X/2.0 - 5; x <= _X/2.0 + 5; x++)
+	// 	{
+	// 		type[IX(x, y, 0)] = type0[IX(x, y, 0)] = FLOWIN;
+	// 		fillParticleInGrid(x, y, 1);
+	// 		Vz[IX(x, y, 0)] = Vz[IX(x, y, 1)] = 2;
+	// 	}
+
+	// fluid come from bottom
+	for(int z = _Z/2.0 - 1; z <= _Z/2.0 + 1; z++)
+		for(int x = _X/2.0 - 1; x <= _X/2.0 + 1; x++)
 		{
-			type[IX(x, _Y+1, z)] = type0[IX(x, _Y, z)] = FLOWIN;
-			fillParticleInGrid(x, _Y, z);
-			Vy[IX(x, _Y, z)] = Vy[IX(x, _Y+1, z)] = -2;
+			type[IX(x, 0, z)] = type0[IX(x, 1, z)] = FLOWIN;
+			fillParticleInGrid(x, 1, z);
+			Vy[IX(x, 0, z)] = Vy[IX(x, 1, z)] = 5;
 		}
-	
-	/*
-	for(int y = _Y/2.0-1; y <= _Y/2.0+1; y++)
-		for(int x = _X/2.0-1; x <= _X/2.0+1; x++)
-		{
-			type[IX(x, y, 0)] = type0[IX(x, y, 0)] = FLOWIN;
-			fillParticleInGrid(x, y, 1);
-			Vz[IX(x, y, 0)] = Vz[IX(x, y, 1)] = 2;
-		}
-	*/
 }
 
 void FluidCube3D::createBlobbySurface()
