@@ -1,22 +1,32 @@
 #include "stdafx.h"
-#ifdef SIMULATION_2D
-
 #include "fluidCube2D.h"
+
+#include <GL/freeglut.h>
 #include <memory.h>
 #include <math.h>
 #include <ctime>
 #include <cstdio>
 
-FluidCube2D::FluidCube2D(float viscosity, float fr, SCENETYPE sc, RENDERTYPE rt)
+
+#define IX(x, y) ( (x) + (y) * (NUMGRIDW+2) )
+#define IX2(x, y) ( (x) + (y) * (NUMGRIDW+2) * GRIDSIZE )
+#define BOUNDED(x, y) ( (type[IX(int(x),int(y))] == SOLID || type[IX(int(x)+1,int(y)+1)] == SOLID)? false : true)
+#define DISTANCE(x1, y1, x2, y2) ( sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2)) )
+#define DISTANCE2(x1, y1, x2, y2) ( (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2) )
+
+
+FluidCube2D::FluidCube2D()
 {
-	size = (_W+2) * (_H+2);
-	h = _L / _H;
+	float CUBELENGTH;
+	assert(Configer::getConfiger()->getInt("Simulation2D", "NumGridW", NUMGRIDW)); 
+	assert(Configer::getConfiger()->getInt("Simulation2D", "NumGridH", NUMGRIDH)); 
+	assert(Configer::getConfiger()->getFloat("Simulation2D", "CubeLength", CUBELENGTH));
+
+	NUMGRID = (NUMGRIDW + 2) * (NUMGRIDH + 2);
+	h = CUBELENGTH / NUMGRIDH;
 	h2 = h * h;
 	hi = 1 / h;
-	visc = viscosity;
-	frameTime = 1.0 / fr;
-	scene = sc;
-	renderType = rt;
+	frameTime = 1.0 / FRAMERATE;
 	ctime = 0;
 	totalTime = 0;
 	iteration = 0;
@@ -25,57 +35,51 @@ FluidCube2D::FluidCube2D(float viscosity, float fr, SCENETYPE sc, RENDERTYPE rt)
 	max_vy = 0;
 	max_p = 0;
 
-	Vx = new float [size]; 
-	Vy = new float [size]; 
-	Vx0 = new float [size]; 
-	Vy0 = new float [size]; 
-	div = new float [size];
-	type = new GRIDTYPE [size];
+	Vx = new float [NUMGRID]; 
+	Vy = new float [NUMGRID]; 
+	Vx0 = new float [NUMGRID]; 
+	Vy0 = new float [NUMGRID]; 
+	div = new float [NUMGRID];
+	memset(Vx, 0, sizeof(float) * NUMGRID);
+	memset(Vy, 0, sizeof(float) * NUMGRID);
+	memset(Vx0, 0, sizeof(float) * NUMGRID);
+	memset(Vy0, 0, sizeof(float) * NUMGRID);
+	memset(div, 0, sizeof(float) * NUMGRID);
+	type = new GridType [NUMGRID];
+	type0 = new GridType [NUMGRID]; 
+	invertedList = new std::vector<int>* [NUMGRID];
 
-	memset(Vx, 0, sizeof(float) * size);
-	memset(Vy, 0, sizeof(float) * size);
-	memset(Vx0, 0, sizeof(float) * size);
-	memset(Vy0, 0, sizeof(float) * size);
-	memset(div, 0, sizeof(float) * size);
-
-	//Advection using BFECC
-	fai_b = new float [size];
-	fai_f = new float [size];
-	memset(fai_b, 0, sizeof(float) * size);
-	memset(fai_f, 0, sizeof(float) * size);
-
-	//Projection using Conjugate Gradient
 	dir[0] = Eigen::Vector2i(0, -1);
 	dir[1] = Eigen::Vector2i(-1, 0);
 	dir[2] = Eigen::Vector2i(1, 0);
 	dir[3] = Eigen::Vector2i(0, 1);
-	pos2index = new int [size]; 
-	neighNoneSolid = new int [size];
-	neighAir = new int [size];
-	neighbor = new int* [size];
-	for(int i = 0; i < size; i ++)
-		neighbor[i] = new int[4];
-
-	//MAC
-	type0 = new GRIDTYPE [size]; 
-	invertedList = new std::vector<int>* [size];
-
-	for(int i = 0; i < size; i++)
+	pos2index = new int [NUMGRID]; 
+	neighNoneSolid = new int [NUMGRID];
+	neighAir = new int [NUMGRID];
+	neighbor = new int* [NUMGRID];
+	for(int i = 0; i < NUMGRID; i++)
 	{
+		neighbor[i] = new int[4];
 		pos2index[i] = -1;
 		type[i] = SOLID;
 		type0[i] = SOLID;
 		invertedList[i] = new std::vector<int>();
 	}
-	for(int y = 1; y <= _H; y++)
-		for(int x = 1; x <= _W; x++)
+	for(int y = 1; y <= NUMGRIDH; y++)
+		for(int x = 1; x <= NUMGRIDW; x++)
 			type[IX(x,y)] = AIR;
 
+	//Advection using BFECC
+	fai_b = new float [NUMGRID];
+	fai_f = new float [NUMGRID];
+	memset(fai_b, 0, sizeof(float) * NUMGRID);
+	memset(fai_f, 0, sizeof(float) * NUMGRID);
+
 	//Blobby
-	pixels = new float [size * GRIDSIZE * GRIDSIZE* 3];
-	pixelType = new GRIDTYPE [size * GRIDSIZE * GRIDSIZE];
-	for(int y = 0; y < (_H+2)*GRIDSIZE; y++)
-		for(int x = 0; x < (_W+2)*GRIDSIZE; x++)
+	pixels = new float [NUMGRID * GRIDSIZE * GRIDSIZE* 3];
+	pixelType = new GridType [NUMGRID * GRIDSIZE * GRIDSIZE];
+	for(int y = 0; y < (NUMGRIDH+2)*GRIDSIZE; y++)
+		for(int x = 0; x < (NUMGRIDW+2)*GRIDSIZE; x++)
 		{
 			int i = x / GRIDSIZE;
 			int j = y / GRIDSIZE;
@@ -105,127 +109,118 @@ FluidCube2D::FluidCube2D(float viscosity, float fr, SCENETYPE sc, RENDERTYPE rt)
 	dir2[7] = Eigen::Vector2i(-1, 1);
 	dir2[8] = Eigen::Vector2i(-1, -1);
 
+
 	//init fluid
 	srand(time(0));
 	originFluid = 0;
 	fluidNum = 0;
-	switch(scene)
+	if(SCENETYPE.compare("CUBEFALL") == 0)
 	{
-	//cube fall
-	case CUBEFALL:
-	{
-		for(int y = _H/4.0; y <= _H/2.0; y++)
-			for(int x = _W/3.0; x <= _W/3.0*2; x++)
+		for(int y = NUMGRIDH/4.0; y <= NUMGRIDH/2.0; y++)
+			for(int x = NUMGRIDW/3.0; x <= NUMGRIDW/3.0*2; x++)
 			{
 				originFluid ++;
 				fillParticleInGrid(x, y);
 			}
-		break;
 	}
-	//sphere fall
-	case SPHEREFALL:
+	else if(SCENETYPE.compare("SPHEREFALL") == 0)
 	{
-		int cx = _W/2;
-		int cy = _H/2;
-		float R = _W/6;
-		for(int y = 1; y <= _H; y++)
-			for(int x = 1; x <= _W; x++)
+		int cx = NUMGRIDW/2;
+		int cy = NUMGRIDH/2;
+		float R = NUMGRIDW/6;
+		for(int y = 1; y <= NUMGRIDH; y++)
+			for(int x = 1; x <= NUMGRIDW; x++)
 				if(DISTANCE(x, y, cx, cy) <= R)
 				{
 					originFluid ++;
 					fillParticleInGrid(x, y);
 				}
-		break;
 	}
-	//contain bottom
-	case CONTAINER:
+	else if(SCENETYPE == std::string("CONTAINER"))
 	{
-		for(int y = 1; y <= _H/4.0; y++)
-			for(int x = 1; x <= _W; x++)
+		for(int y = 1; y <= NUMGRIDH/4.0; y++)
+			for(int x = 1; x <= NUMGRIDW; x++)
 			{
 				originFluid ++;
 				fillParticleInGrid(x, y);
 			}
-		break;
 	}
-	//dam break
-	case DAMBREAK:
+	else if(SCENETYPE == std::string("DAMBREAK"))
 	{
-		for(int y = 1; y <= _H/3.0*2; y++)
-			for(int x = 1; x <= _W/4.0; x++)
+		for(int y = 1; y <= NUMGRIDH/3.0*2; y++)
+			for(int x = 1; x <= NUMGRIDW/4.0; x++)
 			{
 				originFluid ++;
 				fillParticleInGrid(x, y);
 			}
-		break;
 	}
-	case DOUBLEDAM:
+	else if(SCENETYPE == std::string("DOUBLEDAM"))
 	{
-		for(int y = 1; y <= _H/3.0*2; y++)
-			for(int x = 1; x <= _W/4.0; x++)
+		for(int y = 1; y <= NUMGRIDH/3.0*2; y++)
+			for(int x = 1; x <= NUMGRIDW/4.0; x++)
 			{
 				originFluid ++;
 				fillParticleInGrid(x, y);
 			}	
 
-		for(int y = 1; y <= _H/3.0*2+8; y++)
-			for(int x = _W/4.0*3; x <= _W; x++)
+		for(int y = 1; y <= NUMGRIDH/3.0*2+8; y++)
+			for(int x = NUMGRIDW/4.0*3; x <= NUMGRIDW; x++)
 			{
 				originFluid ++;
 				fillParticleInGrid(x, y);
 			}
-		break;
 	}
-	case EMPTY:
-		break;
+	else
+	{
+		PRINT("SceneType not known!");
+		exit(0);
 	}
 
-
-#ifdef OBSTACLE
-	//int cx = _W / 2.0;
-	//int cy = _H / 4.0;
-	//int R = _H * 0.1;
-	for(int y = 0; y <= _H/3.0; y++)
-		for(int x = _W/8.0*3; x <= _W/8.0*5; x++)
-		{
-			//if(DISTANCE(x,y,cx,cy) <= R)
-			type[IX(x, y)] = SOLID;
-			for(int j = y*GRIDSIZE; j < (y+1)*GRIDSIZE; j++)
-				for(int i = x*GRIDSIZE; i < (x+1)*GRIDSIZE; i++)
-				{
-					int index = IX2(i, j);
-					pixels[index*3]		= 0; //R
-					pixels[index*3 + 1]	= 0.7; //G
-					pixels[index*3 + 2]	= 0; //B
-					pixelType[index] = SOLID;
-				}
-		}
-	/*for(int y = 1; y <= _H; y++)
-		for(int x = 1; x <= _W; x++)
-			if(type[IX(x, y)] == SOLID)
+	if(OBSTACLE)
+	{
+		//int cx = NUMGRIDW / 2.0;
+		//int cy = NUMGRIDH / 4.0;
+		//int R = NUMGRIDH * 0.1;
+		for(int y = 0; y <= NUMGRIDH/3.0; y++)
+			for(int x = NUMGRIDW/8.0*3; x <= NUMGRIDW/8.0*5; x++)
 			{
-				for(int i = 0; i < 4; i++)
-					if(type[IX(x+dir[i].x, y+dir[i].y)] == FLUID)
+				//if(DISTANCE(x,y,cx,cy) <= R)
+				type[IX(x, y)] = SOLID;
+				for(int j = y*GRIDSIZE; j < (y+1)*GRIDSIZE; j++)
+					for(int i = x*GRIDSIZE; i < (x+1)*GRIDSIZE; i++)
 					{
-						obstacle.push_back(Pos(x, y));
-						break;
+						int index = IX2(i, j);
+						pixels[index*3]		= 0; //R
+						pixels[index*3 + 1]	= 0.7; //G
+						pixels[index*3 + 2]	= 0; //B
+						pixelType[index] = SOLID;
 					}
 			}
-			else //FLUID
-			{
-				neighNum[IX(x, y)] = 0;
-				for(int i = 0; i < 4; i++)
+		/*for(int y = 1; y <= NUMGRIDH; y++)
+			for(int x = 1; x <= NUMGRIDW; x++)
+				if(type[IX(x, y)] == SOLID)
 				{
-					int xx = x+dir[i].x;
-					int yy = y+dir[i].y;
-					neighbor[IX(x,y)][i] = pos2index[IX(xx, yy)];
-					if(type[IX(xx,yy)] != SOLID)
-						neighNum[IX(x, y)] ++;
+					for(int i = 0; i < 4; i++)
+						if(type[IX(x+dir[i].x, y+dir[i].y)] == FLUID)
+						{
+							obstacle.push_back(Pos2D(x, y));
+							break;
+						}
 				}
-			}
-	*/
-#endif
-
+				else //FLUID
+				{
+					neighNum[IX(x, y)] = 0;
+					for(int i = 0; i < 4; i++)
+					{
+						int xx = x+dir[i].x;
+						int yy = y+dir[i].y;
+						neighbor[IX(x,y)][i] = pos2index[IX(xx, yy)];
+						if(type[IX(xx,yy)] != SOLID)
+							neighNum[IX(x, y)] ++;
+					}
+				}
+		*/
+	}
 }
 
 FluidCube2D::~FluidCube2D()
@@ -234,24 +229,6 @@ FluidCube2D::~FluidCube2D()
 	delete [] Vy;
 	delete [] Vx0;
 	delete [] Vy0;
-	delete [] div;
-	delete [] type;
-
-	delete [] pos2index;
-	for(int i = 0; i < size; i++)
-		delete[] neighbor[i];
-	delete [] neighbor;
-	delete [] neighNoneSolid;
-	delete [] neighAir;
-
-	delete [] fai_b;
-	delete [] fai_f;
-
-	delete [] type0;
-	for(int i = 0; i < size; i++)
-		delete[] invertedList[i];
-	delete [] invertedList;
-
 	delete [] pixels;
 	delete [] pixelType;
 }
@@ -280,16 +257,16 @@ void FluidCube2D::vel_step()
 void FluidCube2D::addForce()
 {
 #pragma omp parallel for
-	for(int y = 1; y <= _H; y++)
-		for(int x = 1; x <= _W; x++)
+	for(int y = 1; y <= NUMGRIDH; y++)
+		for(int x = 1; x <= NUMGRIDW; x++)
 			if(type[IX(x, y)] == FLUID)
 				Vy[IX(x, y)] -= dt * GRAVITY;
 }
 
 void FluidCube2D::diffuseVelosity()
 {
-	diffuse(1, Vx0, Vx, visc);
-	diffuse(2, Vy0, Vy, visc);
+	diffuse(1, Vx0, Vx, VISCOSITY);
+	diffuse(2, Vy0, Vy, VISCOSITY);
 }
 
 void FluidCube2D::advectVelosity()
@@ -298,13 +275,13 @@ void FluidCube2D::advectVelosity()
 	/*
 	advect(1, Vx0, fai_b, true);
 	advect(1, fai_b, fai_f, false);
-	for(int i = 0; i < size; i++)
+	for(int i = 0; i < NUMGRID; i++)
 		fai_b[i] = Vx0[i] + (Vx0[i] - fai_f[i]) * 0.5;
 	advect(1, fai_b, Vx, true);
 
 	advect(2, Vy0, fai_b, true);
 	advect(2, fai_b, fai_f, false);
-	for(int i = 0; i < size; i++)
+	for(int i = 0; i < NUMGRID; i++)
 		fai_b[i] = Vy0[i] + (Vy0[i] - fai_f[i]) * 0.5;
 	advect(2, fai_b, Vy, true);
 	*/
@@ -325,8 +302,8 @@ void FluidCube2D::projectVelosity()
 	float *p = fai_f;
 	//float *div = Vy0;
 
-	for(int y = 1; y <= _H; y++)
-		for(int x = 1; x <= _W; x++)
+	for(int y = 1; y <= NUMGRIDH; y++)
+		for(int x = 1; x <= NUMGRIDW; x++)
 		{
 			if(type[IX(x, y)] != FLUID)
 				continue;
@@ -339,15 +316,15 @@ void FluidCube2D::projectVelosity()
 	
 	for(int k = 0; k < ITERATION; k++)
 	{
-		for(int y = 1; y <= _H; y++)
-			for(int x = 1; x <= _W; x++)
+		for(int y = 1; y <= NUMGRIDH; y++)
+			for(int x = 1; x <= NUMGRIDW; x++)
 				if(type[IX(x, y)] == FLUID)
 					p[IX(x, y)] = (div[IX(x,y)] + p[IX(x,y)] + p[IX(x+1,y)] + p[IX(x,y)] + p[IX(x,y+1)]) / 4;
 	}
 
 #pragma omp parallel for
-	for(int y = 1; y <= _H; y++)
-		for(int x = 1; x <= _W; x++)
+	for(int y = 1; y <= NUMGRIDH; y++)
+		for(int x = 1; x <= NUMGRIDW; x++)
 		{
 			if(type[IX(x, y)] != FLUID)
 				continue;
@@ -387,8 +364,8 @@ void FluidCube2D::projectVelosity()
 	//Conjugate Gradient
 	/*
 	//check div before project
-	for(int y = 1; y <= _H; y++)
-		for(int x = 1; x <= _W; x++)
+	for(int y = 1; y <= NUMGRIDH; y++)
+		for(int x = 1; x <= NUMGRIDW; x++)
 		{
 			if(type[IX(x, y)] != FLUID)
 				continue;
@@ -400,8 +377,8 @@ void FluidCube2D::projectVelosity()
 	int index = 0;
 
 // #pragma omp parallel for (cannot be parallel)
-	for(int y = 1; y <= _H; y++)
-		for(int x = 1; x <= _W; x++)
+	for(int y = 1; y <= NUMGRIDH; y++)
+		for(int x = 1; x <= NUMGRIDW; x++)
 		{
 			if(type[IX(x, y)] != FLUID)
 				continue;
@@ -420,8 +397,8 @@ void FluidCube2D::projectVelosity()
 			max_p = p[i];
 
 #pragma omp parallel for
-	for(int y = 1; y <= _H; y++)
-		for(int x = 1; x <= _W; x++)
+	for(int y = 1; y <= NUMGRIDH; y++)
+		for(int x = 1; x <= NUMGRIDW; x++)
 		{
 			if(type[IX(x, y)] != FLUID)
 				continue;
@@ -466,8 +443,8 @@ void FluidCube2D::diffuse(int b, float *u0, float *u, float diffusion)
 	/*
 	for(int k = 0; k < ITERATION; k++)
 	{
-		for(int y = 1; y <= _H; y++)
-			for(int x = 1; x <= _W; x++)
+		for(int y = 1; y <= NUMGRIDH; y++)
+			for(int x = 1; x <= NUMGRIDW; x++)
 				if(type[IX(x, y)] == FLUID)
 				{	
 					int fnum = 0;
@@ -489,8 +466,8 @@ void FluidCube2D::diffuse(int b, float *u0, float *u, float diffusion)
 
 	//can also try unstable way
 #pragma omp parallel for
-	for(int y = 1; y <= _H; y++)
-		for(int x = 1; x <= _W; x++)
+	for(int y = 1; y <= NUMGRIDH; y++)
+		for(int x = 1; x <= NUMGRIDW; x++)
 			if(type[IX(x, y)] == FLUID)
 			{
 				u[IX(x, y)] = u0[IX(x, y)];
@@ -510,13 +487,13 @@ void FluidCube2D::diffuse(int b, float *u0, float *u, float diffusion)
 void FluidCube2D::advect(int b, float *u0, float *u,  bool backward)
 {
 #pragma omp parallel for
-	for(int y = 1; y <= _H; y++)
-		for(int x = 1; x <= _W; x++)
+	for(int y = 1; y <= NUMGRIDH; y++)
+		for(int x = 1; x <= NUMGRIDW; x++)
 		{
 			if(type[IX(x, y)] != FLUID)
 				continue;
 		
-			Pos pos = traceParticle(b, x, y, backward);
+			Pos2D pos = traceParticle(b, x, y, backward);
 		
 			u[IX(x, y)] = getVelosity(b, pos.x, pos.y, u0);
 		}
@@ -526,20 +503,20 @@ void FluidCube2D::set_bnd()
 {
 	//try to use free-slip condition
 	/*
-	for(int y = 1; y <= _H; y++)
+	for(int y = 1; y <= NUMGRIDH; y++)
 	{
 		Vx[IX(1, y)] = -Vx[IX(2, y)];
-		Vx[IX(_W+1, y)] = -Vx[IX(_W, y)];
+		Vx[IX(NUMGRIDW+1, y)] = -Vx[IX(NUMGRIDW, y)];
 	}
-	for(int x = 1; x <= _W; x++)
+	for(int x = 1; x <= NUMGRIDW; x++)
 	{
 		Vy[IX(x, 1)] = -Vy[IX(x, 2)];
-		Vy[IX(x, _H+1)] = -Vy[IX(x, _H)];
+		Vy[IX(x, NUMGRIDH+1)] = -Vy[IX(x, NUMGRIDH)];
 	}
 	*/
 #pragma omp parallel for
-	for(int y = 1; y <= _H; y++)
-		for(int x = 1; x <= _W; x++)
+	for(int y = 1; y <= NUMGRIDH; y++)
+		for(int x = 1; x <= NUMGRIDW; x++)
 		{
 			if(type[IX(x, y)] != FLUID)
 				continue;
@@ -626,32 +603,37 @@ void FluidCube2D::set_bnd()
 
 void FluidCube2D::simulate()
 {	
-	//while(true)
-	//{
-		bool draw = calculateTimeStep();
+	REPORT("enter simulate");
+	clock_t start = clock();
 
-#ifdef FLOW_IN
+	bool draw = calculateTimeStep();
+
+	if(FLOWIN)
 		addFlowIn();
-#endif
 
-		updateParticles();
-	
-		updateGrid();
-	
-		set_bnd();
-	
-		vel_step();
+	updateParticles();
+	REPORT("updateParticles");
 
-		if(draw)
-			render();
+	updateGrid();
+	REPORT("updateGrid");
 
-		report();
-	//}
+	set_bnd();
+	REPORT("set_bnd");
+
+	vel_step();
+	REPORT("vel_step");
+
+	clock_t simTime = clock() - start;
+	report(simTime);
+
+	if(draw)
+		render();
 }
 
 void FluidCube2D::output(float *u)
 {
-#ifdef OUTPUT 
+	if(!DEBUGPRINT)
+		return; 
 	for(int y = 10; y <= 15; y++)
 		for(int x = 5; x <= 10; x++)
 		{
@@ -659,8 +641,7 @@ void FluidCube2D::output(float *u)
 			if(x == 10)
 				std::cout<<std::endl;
 		}
-	PRINT("=================================\n");
-#endif
+	LOGSEG;
 }
 
 void FluidCube2D::render()
@@ -693,11 +674,11 @@ void FluidCube2D::render()
 	glEnable(GL_LINE_SMOOTH);
 
 	//calculate divergence
-	if(renderType == DIVERGENCE)
+	if(RENDERTYPE == DIVERGENCE)
 	{
 #pragma omp parallel for
-		for(int y = 1; y <= _H; y++)
-			for(int x = 1; x <= _W; x++)
+		for(int y = 1; y <= NUMGRIDH; y++)
+			for(int x = 1; x <= NUMGRIDW; x++)
 			{
 				if(type[IX(x, y)] != FLUID)
 					continue;
@@ -705,10 +686,10 @@ void FluidCube2D::render()
 			}
 	}
 
-	if(renderType == PARTICLE)
+	if(RENDERTYPE == PARTICLE)
 	{
-		for(int i = 0; i <= _W+1; i++)
-		for(int j = 0; j <= _H+1; j++)
+		for(int i = 0; i <= NUMGRIDW+1; i++)
+		for(int j = 0; j <= NUMGRIDH+1; j++)
 		{
 			int x = i;
 			int y = j;
@@ -716,7 +697,7 @@ void FluidCube2D::render()
 
 			if(type[IX(x, y)] == SOLID)
 				glColor3f(0, 0.5, 0);
-			else if(type[IX(x, y)] == FLOWIN)
+			else if(type[IX(x, y)] == FLUIDIN)
 				glColor3f(0, 0, 0.7);
 			else
 				continue;
@@ -738,15 +719,15 @@ void FluidCube2D::render()
 		}
 		glEnd();
 	}
-	else if(renderType == BLOBBY)
+	else if(RENDERTYPE == BLOBBY)
 	{
-		double r = 1.0 * GRIDSIZE / NUMPERGRID;
+		double r = 1.0 * GRIDSIZE / PARTICLEPERGRID;
 		double h = 3 * r;
 		double h2i = 1 / (h*h);
 		double thresh = blobbyKernel( (r*r) / (h*h) );
 		
-		for(int y = 0; y < (_H+2)*GRIDSIZE; y++)
-		for(int x = 0; x < (_W+2)*GRIDSIZE; x++)
+		for(int y = 0; y < (NUMGRIDH+2)*GRIDSIZE; y++)
+		for(int x = 0; x < (NUMGRIDW+2)*GRIDSIZE; x++)
 		{
 			int index = IX2(x, y);
 
@@ -769,7 +750,7 @@ void FluidCube2D::render()
 			continue;
 			*/
 
-			if(pixelType[index] != SOLID && pixelType[index] != FLOWIN)
+			if(pixelType[index] != SOLID && pixelType[index] != FLUIDIN)
 			{
 				//origin blobby sited by Bridson
 				/*
@@ -842,12 +823,12 @@ void FluidCube2D::render()
 				}
 			}
 		}
-		glDrawPixels((_W+2)*GRIDSIZE, (_H+2)*GRIDSIZE, GL_RGB, GL_FLOAT, pixels);
+		glDrawPixels((NUMGRIDW+2)*GRIDSIZE, (NUMGRIDH+2)*GRIDSIZE, GL_RGB, GL_FLOAT, pixels);
 	}
 	else
 	{
-		for(int i = 0; i <= _W+1; i++)
-		for(int j = 0; j <= _H+1; j++)
+		for(int i = 0; i <= NUMGRIDW+1; i++)
+		for(int j = 0; j <= NUMGRIDH+1; j++)
 		{
 			int x = i;
 			int y = j;
@@ -855,11 +836,11 @@ void FluidCube2D::render()
 
 			if(type[IX(x, y)] == SOLID)
 				glColor3f(0, 0.5, 0);
-			else if(type[IX(x, y)] == FLOWIN)
+			else if(type[IX(x, y)] == FLUIDIN)
 				glColor3f(0, 0, 0.7);
 			else if(type[IX(x, y)] == FLUID)
 			{
-				switch(renderType)
+				switch(RENDERTYPE)
 				{
 				case FLUIDGRID:
 					glColor3f(0, 0, 0.7);
@@ -1001,7 +982,7 @@ void FluidCube2D::updateParticles()
 		float y1 = y0 + dt * vy0 * hi;
 		//if particle out of boundary??
 		/*
-		if(x1 < 1 || x1 >= _W+1 || y1 < 1 || y1 >= _H+1)
+		if(x1 < 1 || x1 >= NUMGRIDW+1 || y1 < 1 || y1 >= NUMGRIDH+1)
 		{
 			std::cout<<"Particle out of bound"<<std::endl;
 			REPORT(x1);
@@ -1010,18 +991,18 @@ void FluidCube2D::updateParticles()
 		}
 		if(x1 < 1)
 			x1 = 1;
-		else if(x1 >= _W+1)
-			x1 = _W+0.999;
+		else if(x1 >= NUMGRIDW+1)
+			x1 = NUMGRIDW+0.999;
 		if(y1 < 1)
 			y1 = 1;
-		else if(y1 >= _H+1)
-			y1 = _H+0.999;
+		else if(y1 >= NUMGRIDH+1)
+			y1 = NUMGRIDH+0.999;
 		*/
 
 		if(type[IX(int(x1), int(y1))] == AIR)
 		{
-			particles[i] = Pos(x1, y1);
-			velosities[i] = Velo(vx0, vy0);
+			particles[i] = Pos2D(x1, y1);
+			velosities[i] = Velo2D(vx0, vy0);
 			continue;
 		}
 		else if(type[IX(int(x1), int(y1))] == SOLID)
@@ -1035,8 +1016,8 @@ void FluidCube2D::updateParticles()
 			else if(int(y1) < int(y0))
 				y1 = int(y0)+0.01;
 
-			particles[i] = Pos(x1, y1);
-			velosities[i] = Velo(vx0, vy0);
+			particles[i] = Pos2D(x1, y1);
+			velosities[i] = Velo2D(vx0, vy0);
 			continue;
 		}
 
@@ -1047,7 +1028,7 @@ void FluidCube2D::updateParticles()
 		y1 = y0 + dt * 0.5 * (vy0 + vy1) * hi;
 		//if particle out of boundary???
 		/*
-		if(x1 < 1 || x1 >= _W+1 || y1 < 1 || y1 >= _H+1)
+		if(x1 < 1 || x1 >= NUMGRIDW+1 || y1 < 1 || y1 >= NUMGRIDH+1)
 		{
 			std::cout<<"Particle out of bound"<<std::endl;
 			REPORT(x1);
@@ -1056,12 +1037,12 @@ void FluidCube2D::updateParticles()
 		}
 		if(x1 < 1)
 			x1 = 1;
-		else if(x1 >= _W+1)
-			x1 = _W+0.999;
+		else if(x1 >= NUMGRIDW+1)
+			x1 = NUMGRIDW+0.999;
 		if(y1 < 1)
 			y1 = 1;
-		else if(y1 >= _H+1)
-			y1 = _H+0.999;
+		else if(y1 >= NUMGRIDH+1)
+			y1 = NUMGRIDH+0.999;
 		*/
 		if(type[IX(int(x1), int(y1))] == SOLID)
 		{
@@ -1075,21 +1056,21 @@ void FluidCube2D::updateParticles()
 				y1 = int(y0)+0.01;
 		}
 
-		particles[i] = Pos(x1, y1);
-		velosities[i] = Velo((vx0+vx1)*0.5, (vy0+vy1)*0.5);
+		particles[i] = Pos2D(x1, y1);
+		velosities[i] = Velo2D((vx0+vx1)*0.5, (vy0+vy1)*0.5);
 	}
 }
 
 void FluidCube2D::updateGrid()
 {
 	//swap 
-	GRIDTYPE *tmp = type;
+	GridType *tmp = type;
 	type = type0;
 	type0 = tmp;
 
 #pragma omp parallel for
-	for(int y = 1; y <= _H; y++)
-		for(int x = 1; x <= _W; x++)
+	for(int y = 1; y <= NUMGRIDH; y++)
+		for(int x = 1; x <= NUMGRIDW; x++)
 		{
 			if(type0[IX(x, y)] == AIR || type0[IX(x, y)] == FLUID)
 			{
@@ -1097,7 +1078,6 @@ void FluidCube2D::updateGrid()
 				invertedList[IX(x, y)]->clear();
 			}
 		}
-
 	for(unsigned i = 0; i < particles.size(); i++)
 	{
 		int x = particles[i].x;
@@ -1107,18 +1087,18 @@ void FluidCube2D::updateGrid()
 	}
 	
 	fluidNum = 0;
-	for(int i = 0; i < size; i++)
+	for(int i = 0; i < NUMGRID; i++)
 		pos2index[i] = -1;
 
 // #pragma omp parallel for (cannot be parallel)
-	for(int y = 1; y <= _H; y++)
-		for(int x = 1; x <= _W; x++)
+	for(int y = 1; y <= NUMGRIDH; y++)
+		for(int x = 1; x <= NUMGRIDW; x++)
 			if(type[IX(x,y)] == FLUID)
 				pos2index[IX(x, y)] = fluidNum++;
 
 #pragma omp parallel for
-	for(int y = 1; y <= _H; y++)
-		for(int x = 1; x <= _W; x++)
+	for(int y = 1; y <= NUMGRIDH; y++)
+		for(int x = 1; x <= NUMGRIDW; x++)
 		{
 			if(type[IX(x,y)] == FLUID)
 			{
@@ -1265,8 +1245,8 @@ void FluidCube2D::updateGrid()
 	A = Eigen::SparseMatrix<double>(fluidNum, fluidNum);         // default is column major
 	A.reserve(Eigen::VectorXi::Constant(fluidNum, 5));
 	int index = 0;
-	for(int y = 1; y <= _H; y++)
-		for(int x = 1; x <= _W; x++)
+	for(int y = 1; y <= NUMGRIDH; y++)
+		for(int x = 1; x <= NUMGRIDW; x++)
 		{
 			if(type[IX(x, y)] != FLUID)
 				continue;
@@ -1320,7 +1300,7 @@ float FluidCube2D::getVelosity(int index, float x, float y, float *u)
 		x -= 0.5;
 	}
 	/*
-	if(x < 0 || x >= _W+1 || y < 0 || y >= _H+1)
+	if(x < 0 || x >= NUMGRIDW+1 || y < 0 || y >= NUMGRIDH+1)
 	{
 		std::cout<<"Get velosity out of bound"<<std::endl;
 		REPORT(x);
@@ -1330,12 +1310,12 @@ float FluidCube2D::getVelosity(int index, float x, float y, float *u)
 	*/
 	if(x < 0)
 		x = 0;
-	if(x >= _W+1)
-		x = _W+0.999;
+	if(x >= NUMGRIDW+1)
+		x = NUMGRIDW+0.999;
 	if(y < 0)
 		y = 0;
-	if(y >= _H+1)
-		y = _H+0.999;
+	if(y >= NUMGRIDH+1)
+		y = NUMGRIDH+0.999;
 
 
 	int i0 = int(x), i1 = i0 + 1;
@@ -1347,12 +1327,12 @@ float FluidCube2D::getVelosity(int index, float x, float y, float *u)
 		   s1 * (t0*u[IX(i1,j0)] + t1*u[IX(i1,j1)]);
 }
 
-Velo FluidCube2D::getVelosity(float x, float y, float *vx, float *vy)
+Velo2D FluidCube2D::getVelosity(float x, float y, float *vx, float *vy)
 {
-	return Velo(getVelosity(1,x,y,vx), getVelosity(2,x,y,vy));
+	return Velo2D(getVelosity(1,x,y,vx), getVelosity(2,x,y,vy));
 }
 
-Pos FluidCube2D::traceParticle(int index, int x, int y, bool backward)
+Pos2D FluidCube2D::traceParticle(int index, int x, int y, bool backward)
 {
 	float x0, y0;
 	if(index == 1)
@@ -1365,19 +1345,19 @@ Pos FluidCube2D::traceParticle(int index, int x, int y, bool backward)
 		x0 = x + 0.5;
 		y0 = y;
 	}
-	Velo v0 = getVelosity(x0, y0, Vx0, Vy0);
+	Velo2D v0 = getVelosity(x0, y0, Vx0, Vy0);
 	float t = (backward)? -dt : dt;
 	//
-	//Pos p = Pos(x0 + v0.x*t*hi, y0 + v0.y*t*hi);
-	Velo v1 = getVelosity(x0 + v0.x*t*hi, y0 + v0.y*t*hi, Vx0, Vy0);
-	return Pos(x0 + 0.5*t*(v0.x+v1.x)*hi, y0 + 0.5*t*(v0.y+v1.y)*hi);
+	//Pos2D p = Pos2D(x0 + v0.x*t*hi, y0 + v0.y*t*hi);
+	Velo2D v1 = getVelosity(x0 + v0.x*t*hi, y0 + v0.y*t*hi, Vx0, Vy0);
+	return Pos2D(x0 + 0.5*t*(v0.x+v1.x)*hi, y0 + 0.5*t*(v0.y+v1.y)*hi);
 }
 
 void FluidCube2D::errorRemove()
 {
 	double eps = 1e-12;
 
-	for(int i = 0; i < size; i++)
+	for(int i = 0; i < NUMGRID; i++)
 	{
 		if(fabs(Vx[i]) < eps)
 			Vx[i] = 0;
@@ -1388,7 +1368,7 @@ void FluidCube2D::errorRemove()
 
 void FluidCube2D::fillParticleInGrid(int x, int y)
 {
-	int nump = NUMPERGRID;
+	int nump = PARTICLEPERGRID;
 	int sample = 10000;
 	float subSize = 1.0 / nump;
 	for(int i = 0; i < nump; i++)
@@ -1396,12 +1376,12 @@ void FluidCube2D::fillParticleInGrid(int x, int y)
 		{
 			float x0 = subSize * (rand()%sample) / sample + i * subSize;
 			float y0 = subSize * (rand()%sample) / sample + j * subSize;
-			particles.push_back(Pos(x+x0, y+y0) );
-			velosities.push_back(Velo(0, 0));
+			particles.push_back(Pos2D(x+x0, y+y0) );
+			velosities.push_back(Velo2D(0, 0));
 		}
 }
 
-void FluidCube2D::report()
+void FluidCube2D::report(clock_t simTime)
 {
 	REPORT(iteration);
 	REPORT(dt);
@@ -1413,23 +1393,15 @@ void FluidCube2D::report()
 	REPORT(fluidShrink);
 
 	REPORT(totalTime);
-	PRINT("======================================");
-	PRINT("");
+	LOGSEG;
 }
 
 void FluidCube2D::addFlowIn()
 {
-	for(int y = _H/8.0*6; y <= _H/8.0*7; y++)
+	for(int y = NUMGRIDH/8.0*6; y <= NUMGRIDH/8.0*7; y++)
 	{
-		type[IX(0, y)] = type0[IX(0, y)] = FLOWIN;
+		type[IX(0, y)] = type0[IX(0, y)] = FLUIDIN;
 		fillParticleInGrid(1, y);
-		/*
-		for(int i = 0; i < nump; i++)
-		{
-			particles.push_back(Pos(1.01, y+i*step) );
-			velosities.push_back(Velo(0, 0));
-		}
-		*/
 		Vx[IX(0, y)] = Vx[IX(1, y)] = 1;
 		Vy[IX(0, y)] = 0;
 
@@ -1441,7 +1413,7 @@ void FluidCube2D::addFlowIn()
 				pixels[index*3]		= 0; //R
 				pixels[index*3 + 1]	= 0; //G
 				pixels[index*3 + 2]	= 0.7; //B
-				pixelType[index] = FLOWIN;
+				pixelType[index] = FLUIDIN;
 			}
 	}
 }
@@ -1453,5 +1425,3 @@ double FluidCube2D::blobbyKernel(double s2)
 	else
 		return 0;
 }
-
-#endif

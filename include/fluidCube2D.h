@@ -1,135 +1,83 @@
 #ifndef _FLUIDCUBE2D_H_
 #define _FLUIDCUBE2D_H_
 
-#include <GL/freeglut.h>
-#include <Eigen/Eigen>
-#include <vector>
+#include "fluidCube.h"
 
-enum GRIDTYPE
-{
-	FLUID,
-	AIR,
-	SOLID,
-	FLOWIN
-};
 
-struct Pos
+struct Pos2D
 {
 	float x;
 	float y;
-	Pos() {}
-	Pos(float _x, float _y): x(_x), y(_y) {}
+	Pos2D() {}
+	Pos2D(float _x, float _y): x(_x), y(_y) {}
 };
-typedef Pos Velo;
+typedef Pos2D Velo2D;
 
-enum SCENETYPE
-{
-	CUBEFALL,
-	SPHEREFALL,
-	CONTAINER,
-	DAMBREAK,
-	DOUBLEDAM,
-	EMPTY
-};
 
-enum RENDERTYPE
-{
-	VELOSITYX,
-	VELOSITYY,
-	PRESSURE,
-	DIVERGENCE,
-	PARTICLE,
-	FLUIDGRID,
-	BLOBBY
-};
-
-class FluidCube2D
+class FluidCube2D: public FluidCube
 {
 private:
-	float h;
-	float hi;
-	float h2;
-	float dt;
-	float visc;
+	// cube
+	int NUMGRIDH;
+	int NUMGRIDW;
+	Eigen::Vector2i dir[4];
 
-	int size;
+	// fluid field
 	float *Vx;
 	float *Vy;
 	float *Vx0;
 	float *Vy0;
-	float *div;
-	GRIDTYPE *type;
-	std::vector<Pos> obstacle;
+	std::vector<Pos2D> particles;
+	std::vector<Velo2D> velosities;
+
+	// scene
+	std::vector<Pos2D> obstacle;
+
+	// status
 	float max_vx;
 	float max_vy;
-	float max_p;
 	
-	//Projection using Conjugate Gradient
-	Eigen::Vector2i dir[4];
-	int fluidNum;
-	int originFluid;
-	int **neighbor;
-	int *neighNoneSolid;
-	int *neighAir;
-	int *pos2index;
-	Eigen::SparseMatrix<double> A;
-	Eigen::SparseLU<Eigen::SparseMatrix<double>> solver;
-	Eigen::VectorXd p;
-
-	//Advection using BFECC
-	float *fai_b;
-	float *fai_f;
-
-	//MAC
-	std::vector<Pos> particles;
-	std::vector<Velo> velosities;
-	GRIDTYPE *type0;
-	std::vector<int> **invertedList;
-	
-	SCENETYPE scene;
-	RENDERTYPE renderType;
-	float totalTime;
-	int iteration;
-	float ctime;
-	float frameTime;
-
-	//Blobby
+	// blobby
 	float* pixels;
-	GRIDTYPE* pixelType;
+	GridType* pixelType;
 	Eigen::Vector2i dir2[9];
 
 private:
+	// simulate
 	bool calculateTimeStep();
 	void updateParticles();
 	void updateGrid();
-	float getVelosity(int index, float x, float y, float *u);
-	Velo getVelosity(float x, float y, float *vx, float *vy);
-	Pos traceParticle(int index, int x, int y, bool backward);
-	void addFlowIn();
-
-	void errorRemove();
-	void fillParticleInGrid(int x, int y);
-
+	void set_bnd();
 	void vel_step();
+
+	// vel_step
 	void addForce();
 	void diffuseVelosity();
 	void advectVelosity();
 	void projectVelosity();
-	
+	void errorRemove();
+
+	// help function
 	void diffuse(int b, float *u0, float *u, float diffusion);
 	void advect(int b, float *u0, float *u, bool backward);
-	void swap(float *x0, float *x);
-	void set_bnd();
+	float getVelosity(int index, float x, float y, float *u);
+	Velo2D getVelosity(float x, float y, float *vx, float *vy);
+	Pos2D traceParticle(int index, int x, int y, bool backward);
+	void fillParticleInGrid(int x, int y);
+	
+	// scene
+	void addFlowIn();
 
+	// output
 	void draw_velo(int i, int j, float vx, float vy);
-
 	void output(float *u);
-	void report();
+	void report(clock_t);
 
+	// blobby
 	double blobbyKernel(double s2);
 
 public:
-	FluidCube2D(float viscosity, float fr, SCENETYPE sc = CONTAINER, RENDERTYPE rt = PARTICLE);
+	FluidCube2D();
 	~FluidCube2D();
 	void simulate();
 	void render();

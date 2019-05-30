@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "fluidCube3D.h"
 #include "display.h"
-#include <fstream>
 #include <Eigen/Core>
 #include <omp.h>
 
@@ -11,20 +10,26 @@ int main(int argc, char* argv[])
 	Eigen::setNbThreads(16);
 	Eigen::initParallel();
 
-#ifndef CREATEBLOBBY
-	PRINT("Program Starting");
+	bool CREATEBLOBBY;
+	assert(Configer::getConfiger()->getBool("Base", "CreateBlobby", CREATEBLOBBY));
 
-	glutInit(&argc, argv);
-	//initialize the window 
-	initialize();
-	
-	PRINT("Entering Main Loop");
-	glutMainLoop(); //this starts the infinite loop
-	PRINT("Exiting Program");
-#else
-	FluidCube3D *cube = new FluidCube3D(VISCOSITY, FRAMERATE, MYSCENE, MYRENDER);
-	cube->createBlobby(1000);
+	if(!CREATEBLOBBY)
+	{
+		PRINT("Program Starting");
 
-#endif
+		glutInit(&argc, argv);
+		//initialize the window 
+		initialize();
+		
+		PRINT("Entering Main Loop");
+		glutMainLoop(); //this starts the infinite loop
+		PRINT("Exiting Program");
+	}
+	else
+	{
+		FluidCube3D *cube = new FluidCube3D();
+		cube->createBlobby(1000);
+	}
+
 	return 0;
 }

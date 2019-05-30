@@ -10,15 +10,21 @@ SET(PROJECT_HEADER
         ${PROJECT_SOURCE_DIR}/include/Vectors.h
         ${PROJECT_SOURCE_DIR}/include/stdafx.h
         ${PROJECT_SOURCE_DIR}/include/display.h
+        ${PROJECT_SOURCE_DIR}/include/fluidCube.h
         ${PROJECT_SOURCE_DIR}/include/fluidCube2D.h
-        ${PROJECT_SOURCE_DIR}/include/fluidCube3D.h)
+        ${PROJECT_SOURCE_DIR}/include/fluidCube3D.h
+        ${PROJECT_SOURCE_DIR}/include/Configer.h
+        ${PROJECT_SOURCE_DIR}/include/Logger.h)
 
 SET(PROJECT_SRC
         ${PROJECT_SOURCE_DIR}/src/CIsoSurface.cpp
         ${PROJECT_SOURCE_DIR}/src/Vectors.cpp
         ${PROJECT_SOURCE_DIR}/src/display.cpp
+        ${PROJECT_SOURCE_DIR}/src/fluidCube.cpp
         ${PROJECT_SOURCE_DIR}/src/fluidCube2D.cpp
         ${PROJECT_SOURCE_DIR}/src/fluidCube3D.cpp
+        ${PROJECT_SOURCE_DIR}/src/Configer.cpp
+        ${PROJECT_SOURCE_DIR}/src/Logger.cpp
         ${PROJECT_SOURCE_DIR}/src/main.cpp)
 
 INCLUDE_DIRECTORIES(include)
