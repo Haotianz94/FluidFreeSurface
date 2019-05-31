@@ -136,7 +136,7 @@ FluidCube2D::FluidCube2D()
 					fillParticleInGrid(x, y);
 				}
 	}
-	else if(SCENETYPE == std::string("CONTAINER"))
+	else if(SCENETYPE.compare("CONTAINER") == 0)
 	{
 		for(int y = 1; y <= NUMGRIDH/4.0; y++)
 			for(int x = 1; x <= NUMGRIDW; x++)
@@ -145,7 +145,7 @@ FluidCube2D::FluidCube2D()
 				fillParticleInGrid(x, y);
 			}
 	}
-	else if(SCENETYPE == std::string("DAMBREAK"))
+	else if(SCENETYPE.compare("DAMBREAK") == 0)
 	{
 		for(int y = 1; y <= NUMGRIDH/3.0*2; y++)
 			for(int x = 1; x <= NUMGRIDW/4.0; x++)
@@ -154,7 +154,7 @@ FluidCube2D::FluidCube2D()
 				fillParticleInGrid(x, y);
 			}
 	}
-	else if(SCENETYPE == std::string("DOUBLEDAM"))
+	else if(SCENETYPE.compare("DOUBLEDAM") == 0)
 	{
 		for(int y = 1; y <= NUMGRIDH/3.0*2; y++)
 			for(int x = 1; x <= NUMGRIDW/4.0; x++)
@@ -170,13 +170,17 @@ FluidCube2D::FluidCube2D()
 				fillParticleInGrid(x, y);
 			}
 	}
+	else if(SCENETYPE.compare("NONE") == 0)
+	{
+		
+	}
 	else
 	{
 		PRINT("SceneType not known!");
 		exit(0);
 	}
 
-	if(OBSTACLE)
+	if(OBSTACLETYPE.compare("CENTERWALL"))
 	{
 		//int cx = NUMGRIDW / 2.0;
 		//int cy = NUMGRIDH / 4.0;
@@ -608,8 +612,7 @@ void FluidCube2D::simulate()
 
 	bool draw = calculateTimeStep();
 
-	if(FLOWIN)
-		addFlowIn();
+	addFlowIn();
 
 	updateParticles();
 	REPORT("updateParticles");
@@ -1398,23 +1401,26 @@ void FluidCube2D::report(clock_t simTime)
 
 void FluidCube2D::addFlowIn()
 {
-	for(int y = NUMGRIDH/8.0*6; y <= NUMGRIDH/8.0*7; y++)
+	if(FLOWINTYPE.compare("TOP") == 0)
 	{
-		type[IX(0, y)] = type0[IX(0, y)] = FLUIDIN;
-		fillParticleInGrid(1, y);
-		Vx[IX(0, y)] = Vx[IX(1, y)] = 1;
-		Vy[IX(0, y)] = 0;
+		for(int y = NUMGRIDH/8.0*6; y <= NUMGRIDH/8.0*7; y++)
+		{
+			type[IX(0, y)] = type0[IX(0, y)] = FLUIDIN;
+			fillParticleInGrid(1, y);
+			Vx[IX(0, y)] = Vx[IX(1, y)] = 1;
+			Vy[IX(0, y)] = 0;
 
-		//Blobby
-		for(int j = y*GRIDSIZE; j < (y+1)*GRIDSIZE; j++)
-			for(int i = 0; i < GRIDSIZE; i++)
-			{
-				int index = IX2(i, j);
-				pixels[index*3]		= 0; //R
-				pixels[index*3 + 1]	= 0; //G
-				pixels[index*3 + 2]	= 0.7; //B
-				pixelType[index] = FLUIDIN;
-			}
+			//Blobby
+			for(int j = y*GRIDSIZE; j < (y+1)*GRIDSIZE; j++)
+				for(int i = 0; i < GRIDSIZE; i++)
+				{
+					int index = IX2(i, j);
+					pixels[index*3]		= 0; //R
+					pixels[index*3 + 1]	= 0; //G
+					pixels[index*3 + 2]	= 0.7; //B
+					pixelType[index] = FLUIDIN;
+				}
+		}
 	}
 }
 

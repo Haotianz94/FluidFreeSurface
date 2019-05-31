@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "fluidCube3D.h"
 #include "CIsoSurface.h"
+#include "quadmesh.h"
 
 #include <GL/freeglut.h>
 #include <memory.h>
@@ -103,12 +104,26 @@ FluidCube3D::FluidCube3D()
 	for(int i = 0; i < NUMGRID; i++)
 		layer[i] == -1;
 
+	initFluid();
+	initSolid();
+}
 
-	//init fluid
+FluidCube3D::~FluidCube3D()
+{
+	delete [] Vx;
+	delete [] Vy;
+	delete [] Vz;
+	delete [] Vx0;
+	delete [] Vy0;
+	delete [] Vz0;
+}
+
+void FluidCube3D::initFluid()
+{
 	srand(time(0));
 	originFluid = 0;
 	fluidNum = 0;
-	if(SCENETYPE == std::string("CUBEFALL"))
+	if(SCENETYPE.compare("CUBEFALL") == 0)
 	{
 		for(int z = NUMGRIDZ/3.0; z <= NUMGRIDZ/3.0*2; z++)
 			for(int y = NUMGRIDY/4.0; y <= NUMGRIDY/2.0; y++)
@@ -118,7 +133,7 @@ FluidCube3D::FluidCube3D()
 					fillParticleInGrid(x, y, z);
 				}
 	}
-	else if(SCENETYPE == std::string("SPHEREFALL"))
+	else if(SCENETYPE.compare("SPHEREFALL") == 0)
 	{
 		int cx = NUMGRIDX/2;
 		int cy = NUMGRIDY/2;
@@ -133,7 +148,7 @@ FluidCube3D::FluidCube3D()
 						fillParticleInGrid(x, y, z);
 					}
 	}
-	else if(SCENETYPE == std::string("CONTAINER"))
+	else if(SCENETYPE.compare("CONTAINER") == 0)
 	{
 		
 		for(int z = NUMGRIDZ/2.0-2; z <= NUMGRIDZ/2.0+2; z++)
@@ -153,7 +168,7 @@ FluidCube3D::FluidCube3D()
 					fillParticleInGrid(x, y, z);
 				}
 	}
-	else if(SCENETYPE == std::string("DAMBREAK"))
+	else if(SCENETYPE.compare("DAMBREAK") == 0)
 	{
 		for(int z = 1; z <= NUMGRIDZ/4.0; z++)
 			for(int y = 1; y <= NUMGRIDY/3.0*2; y++)
@@ -163,7 +178,7 @@ FluidCube3D::FluidCube3D()
 					fillParticleInGrid(x, y, z);
 				}
 	}
-	else if(SCENETYPE == std::string("DOUBLEDAM"))
+	else if(SCENETYPE.compare("DOUBLEDAM") == 0)
 	{
 		for(int z = 1; z <= NUMGRIDZ/4.0; z++)
 			for(int y = 1; y <= NUMGRIDY/3.0*2; y++)
@@ -181,7 +196,11 @@ FluidCube3D::FluidCube3D()
 					fillParticleInGrid(x, y, z);
 				}
 	}
-	else if(SCENETYPE == std::string("EMPTY"))
+	else if(SCENETYPE.compare("VOLCANO") == 0)
+	{
+
+	}
+	else if(SCENETYPE.compare("NONE") == 0)
 	{
 
 	}
@@ -190,49 +209,96 @@ FluidCube3D::FluidCube3D()
 		PRINT("SceneType not known!");
 		exit(0);
 	}
+}
 
-	if(OBSTACLE)
+void FluidCube3D::initSolid()
+{	
+	if(SCENETYPE.compare("VOLCANO") == 0)
+	{
+		std::string obj_path;
+		assert(Configer::getConfiger()->getString("Simulation3D", "ObjectPath", obj_path));
+		QuadMesh obstacle(obj_path);
+	}
+
+	if(OBSTACLETYPE.compare("CENTERWALL") == 0)
 	{
 		for(int z = NUMGRIDZ/16.0*7; z <= NUMGRIDZ/16.0*9; z++)
 			for(int y = 1; y <= NUMGRIDY/3.0*2; y++)
 				for(int x = NUMGRIDX/4.0; x <= NUMGRIDX/4.0*3; x++)
 					type[IX(x, y, z)] = type0[IX(x, y, z)] = SOLID;
-		/*for(int y = 1; y <= NUMGRIDY; y++)
-		for(int x = 1; x <= NUMGRIDX; x++)
-			if(type[IX(x, y)] == SOLID)
-			{
-				for(int i = 0; i < 4; i++)
-					if(type[IX(x+dir[i].x, y+dir[i].y)] == FLUID)
-					{
-						obstacle.push_back(Pos3D(x, y));
-						break;
-					}
-			}
-			else //FLUID
-			{
-				neighNum[IX(x, y)] = 0;
-				for(int i = 0; i < 4; i++)
-				{
-					int xx = x+dir[i].x;
-					int yy = y+dir[i].y;
-					neighbor[IX(x,y)][i] = pos2index[IX(xx, yy)];
-					if(type[IX(xx,yy)] != SOLID)
-						neighNum[IX(x, y)] ++;
-				}
-			}
-		*/
 	}
 }
 
-
-FluidCube3D::~FluidCube3D()
+void FluidCube3D::addFlowIn()
 {
-	delete [] Vx;
-	delete [] Vy;
-	delete [] Vz;
-	delete [] Vx0;
-	delete [] Vy0;
-	delete [] Vz0;
+	if(SCENETYPE.compare("VOLCANO") == 0)
+	{
+
+	}
+
+	if(FLOWINTYPE.compare("TOP") == 0)
+	{
+		// fulid come from top 
+		for(int z = NUMGRIDZ/2.0-1; z <= NUMGRIDZ/2.0+1; z++)
+			for(int x = NUMGRIDX/2.0-1; x <= NUMGRIDX/2.0+1; x++)
+			{
+				type[IX(x, NUMGRIDY+1, z)] = type0[IX(x, NUMGRIDY, z)] = FLUIDIN;
+				fillParticleInGrid(x, NUMGRIDY, z);
+				Vy[IX(x, NUMGRIDY, z)] = Vy[IX(x, NUMGRIDY+1, z)] = -2;
+			}
+	}
+	else if(FLOWINTYPE.compare("SIDE") == 0)
+	{ 	
+		// fluid come from side
+		for(int y = NUMGRIDY/2.0 - 5; y <= NUMGRIDY/2.0 + 5; y++)
+			for(int x = NUMGRIDX/2.0 - 5; x <= NUMGRIDX/2.0 + 5; x++)
+			{
+				type[IX(x, y, 0)] = type0[IX(x, y, 0)] = FLUIDIN;
+				fillParticleInGrid(x, y, 1);
+				Vz[IX(x, y, 0)] = Vz[IX(x, y, 1)] = 2;
+			}
+	}
+	else if(FLOWINTYPE.compare("BOTTOM") == 0)
+	{ 
+		// fluid come from bottom
+		for(int z = NUMGRIDZ/2.0 - 1; z <= NUMGRIDZ/2.0 + 1; z++)
+			for(int x = NUMGRIDX/2.0 - 1; x <= NUMGRIDX/2.0 + 1; x++)
+			{
+				type[IX(x, 0, z)] = type0[IX(x, 1, z)] = FLUIDIN;
+				fillParticleInGrid(x, 1, z);
+				Vy[IX(x, 0, z)] = Vy[IX(x, 1, z)] = 5;
+			}
+	}
+}
+
+void FluidCube3D::simulate()
+{
+	clock_t start = clock();
+
+	bool draw = calculateTimeStep();
+	
+	addFlowIn();
+	if(fluidNum != 0)
+	{
+		updateParticles();
+		
+		updateGrid();
+		
+		set_bnd();
+		
+		vel_step();
+	}
+
+	clock_t simTime = clock() - start;
+	report(simTime);
+
+	if(draw)
+	{	
+		if(CREATEBLOBBY)
+			createBlobbySurface();
+		else
+			render();
+	}
 }
 
 void FluidCube3D::vel_step()
@@ -407,7 +473,6 @@ void FluidCube3D::projectVelosity()
 											+ Vz[IX(x,y,z+1)]-Vz[IX(x,y,z)]);
 			}
 	
-	//std::cout<<b<<std::endl;
 	p.resize(fluidNum);
 	p = solver.solve(b);
 
@@ -920,228 +985,6 @@ void FluidCube3D::set_bnd()
 			}
 }
 
-void FluidCube3D::simulate()
-{
-	clock_t start = clock();
-
-	bool draw = calculateTimeStep();
-	
-	if(FLOWIN)
-		addFlowIn();
-
-	updateParticles();
-	
-	updateGrid();
-	
-	set_bnd();
-	
-	vel_step();
-
-	clock_t simTime = clock() - start;
-	report(simTime);
-
-	if(draw)
-	{	
-		if(CREATEBLOBBY)
-			createBlobbySurface();
-		else
-			render();
-	}
-}
-
-void FluidCube3D::output(float *u)
-{
-	if(!DEBUGPRINT)
-		return;  
-	for(int z = 10; z <= 15; z++)
-		for(int y = 10; y <= 15; y++)
-			for(int x = 5; x <= 10; x++)
-			{
-				std::cout<<u[IX(x, y, z)]<<' ';
-				if(x == 10)
-					std::cout<<std::endl;
-			}
-	LOGSEG;
-}
-
-void FluidCube3D::render()
-{
-	glMatrixMode(GL_MODELVIEW);
-	// Reset transformations
-	glLoadIdentity();
-	glScalef(0.02f, 0.02f, 0.02f);
-
-	// Set the camera
-	gluLookAt(	px, py, pz,
-				0, 0, 0,
-				0.0f, 1.0f, 0.0f);
-
-	//clear the screen to a desired color in range [0-1] RGBA
-	glClearColor(0.5, 0.5, 0.5, 1);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	//enable blending for translucency
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glEnable(GL_POINT_SMOOTH);
-	glEnable(GL_LINE_SMOOTH);
-	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LESS);
-
-	int LENGTH = NUMGRIDX * GRIDSIZE;
-	//calculate divergence
-	if(RENDERTYPE == DIVERGENCE)
-	{
-#pragma omp parallel for
-		for(int z = 1; z <= NUMGRIDZ; z++)
-			for(int y = 1; y <= NUMGRIDY; y++)
-				for(int x = 1; x <= NUMGRIDX; x++)
-				{
-					if(type[IX(x, y, z)] != FLUID)
-						continue;
-					div[IX(x, y, z)] = (Vx[IX(x+1,y,z)]-Vx[IX(x,y,z)] + Vy[IX(x,y+1,z)]-Vy[IX(x,y,z)]
-										+ Vz[IX(x,y,z+1)]-Vz[IX(x,y,z)]);
-				}
-	}
-
-	glTranslatef(-LENGTH/2, -LENGTH/2, -LENGTH/2);
-
-// #pragma omp parallel for (cannot make rendering parallel)
-	for(int k = 0; k < NUMGRIDZ; k++)	
-		for(int j = 0; j < NUMGRIDY; j++)
-			for(int i = 0; i < NUMGRIDX; i++)
-			{
-				int x = i+1;
-				int y = j+1;
-				int z = k+1;
-				float color;
-				if(type[IX(x, y, z)] == SOLID)
-					glColor4f(0, 0.5, 0, 1);
-				else if(type[IX(x, y, z)] == FLUID)
-				{
-					switch(RENDERTYPE)
-					{
-					case FLUIDGRID:
-						glColor3f(0, 0, 0.7);
-						break;
-					case PRESSURE:
-						glColor3f(p[pos2index[IX(x,y,z)]]/max_p, 0, 0);
-						break;
-					case VELOSITYY:
-						if(Vy[IX(x, y, z)] >= 0)
-							glColor3f(Vy[IX(x, y, z)]/max_vy, 0, 0);
-						else
-							glColor3f(0, -Vy[IX(x, y, z)]/max_vy, 0);
-						break;
-					case VELOSITYX:
-						if(Vx[IX(x, y, z)] >= 0)
-							glColor3f(Vx[IX(x, y, z)]/max_vx, 0, 0);
-						else
-							glColor3f(0, -Vx[IX(x, y, z)]/max_vx, 0);
-						break;
-					case DIVERGENCE:
-						if(fabs(div[IX(x, y, z)]) > 1e-5)
-							glColor3f(1, 0, 0);
-						else
-							glColor3f(0, 0, 0.7);
-						break;
-					case PARTICLE:
-						continue;
-						break;
-					default:
-						glColor3f(0, 0, 0.7);
-						break;
-					//vorticity
-					//float w = 0.5 * (Vy[IX(x+1, y)] - Vy[IX(x-1, y)]);
-					//		  - 0.5 * (Vx[IX(x, y+1)] - Vx[IX(x, y-1)]);
-					}
-				}
-				else //AIR
-					continue;
-
-				//draw cube 
-				glBegin(GL_QUADS);
-				//hold k
-				glVertex3f(i*GRIDSIZE, j*GRIDSIZE, k*GRIDSIZE);
-				glVertex3f(i*GRIDSIZE, (j+1)*GRIDSIZE, k*GRIDSIZE);
-				glVertex3f((i+1)*GRIDSIZE, (j+1)*GRIDSIZE, k*GRIDSIZE);
-				glVertex3f((i+1)*GRIDSIZE, j*GRIDSIZE, k*GRIDSIZE);
-				//hold k+1
-				glVertex3f(i*GRIDSIZE, j*GRIDSIZE, (k+1)*GRIDSIZE);
-				glVertex3f((i+1)*GRIDSIZE, j*GRIDSIZE, (k+1)*GRIDSIZE);
-				glVertex3f((i+1)*GRIDSIZE, (j+1)*GRIDSIZE, (k+1)*GRIDSIZE);
-				glVertex3f(i*GRIDSIZE, (j+1)*GRIDSIZE, (k+1)*GRIDSIZE);
-				//hold j
-				glVertex3f(i*GRIDSIZE, j*GRIDSIZE, k*GRIDSIZE);
-				glVertex3f((i+1)*GRIDSIZE, j*GRIDSIZE, k*GRIDSIZE);
-				glVertex3f((i+1)*GRIDSIZE, j*GRIDSIZE, (k+1)*GRIDSIZE);
-				glVertex3f(i*GRIDSIZE, j*GRIDSIZE, (k+1)*GRIDSIZE);
-				//hold j+1
-				glVertex3f(i*GRIDSIZE, (j+1)*GRIDSIZE, k*GRIDSIZE);
-				glVertex3f(i*GRIDSIZE, (j+1)*GRIDSIZE, (k+1)*GRIDSIZE);
-				glVertex3f((i+1)*GRIDSIZE, (j+1)*GRIDSIZE, (k+1)*GRIDSIZE);
-				glVertex3f((i+1)*GRIDSIZE, (j+1)*GRIDSIZE, k*GRIDSIZE);
-				//hold i
-				glVertex3f(i*GRIDSIZE, j*GRIDSIZE, k*GRIDSIZE);
-				glVertex3f(i*GRIDSIZE, j*GRIDSIZE, (k+1)*GRIDSIZE);
-				glVertex3f(i*GRIDSIZE, (j+1)*GRIDSIZE, (k+1)*GRIDSIZE);
-				glVertex3f(i*GRIDSIZE, (j+1)*GRIDSIZE, k*GRIDSIZE);
-				//hold i+1
-				glVertex3f((i+1)*GRIDSIZE, j*GRIDSIZE, k*GRIDSIZE);
-				glVertex3f((i+1)*GRIDSIZE, (j+1)*GRIDSIZE, k*GRIDSIZE);
-				glVertex3f((i+1)*GRIDSIZE, (j+1)*GRIDSIZE, (k+1)*GRIDSIZE);
-				glVertex3f((i+1)*GRIDSIZE, j*GRIDSIZE, (k+1)*GRIDSIZE);
-				glEnd();
-				//if(GRIDSIZE >= 10 && type[IX(x, y)] == FLUID)
-				//	draw_velo(i, j, Vx[IX(x, y)], Vy[IX(x, y)]);
-			}
-
-	//draw particles
-	if(RENDERTYPE == PARTICLE)
-	{
-		glColor3f(0, 0, 0.7);
-		glBegin(GL_POINTS);
-		for(unsigned i = 0; i < particles.size(); i++)
-		{
-			glVertex3f((particles[i].x-1)*GRIDSIZE, (particles[i].y-1)*GRIDSIZE, (particles[i].z-1)*GRIDSIZE);
-		}
-		glEnd();
-	}
-
-	
-	//draw box
-	glColor3f(1, 1, 1);
-	glBegin(GL_LINES);
-	glVertex3f(0, 0, 0);
-	glVertex3f(0, LENGTH, 0);
-	glVertex3f(0, LENGTH, 0);
-	glVertex3f(LENGTH, LENGTH, 0);
-	glVertex3f(LENGTH, LENGTH, 0);
-	glVertex3f(LENGTH, 0, 0);
-	glVertex3f(LENGTH, 0, 0);
-	glVertex3f(0, 0, 0);
-
-	glVertex3f(0, 0, LENGTH);
-	glVertex3f(0, LENGTH, LENGTH);
-	glVertex3f(0, LENGTH, LENGTH);
-	glVertex3f(LENGTH, LENGTH, LENGTH);
-	glVertex3f(LENGTH, LENGTH, LENGTH);
-	glVertex3f(LENGTH, 0, LENGTH);
-	glVertex3f(LENGTH, 0, LENGTH);
-	glVertex3f(0, 0, LENGTH);
-
-	glVertex3f(0, 0, 0);
-	glVertex3f(0, 0, LENGTH);
-	glVertex3f(0, LENGTH, LENGTH);
-	glVertex3f(0, LENGTH, 0);
-	glVertex3f(LENGTH, LENGTH, LENGTH);
-	glVertex3f(LENGTH, LENGTH, 0);
-	glVertex3f(LENGTH, 0, LENGTH);
-	glVertex3f(LENGTH, 0, 0);
-	glEnd();
-
-	glutSwapBuffers();
-}
-
 bool FluidCube3D::calculateTimeStep()
 {
 	iteration ++;
@@ -1515,7 +1358,89 @@ void FluidCube3D::updateGrid()
 			}
 	A.makeCompressed();
 	solver.compute(A);
+}
 
+void FluidCube3D::extrapolate()
+{
+	if(max_vx > max_vy)
+		if(max_vx > max_vz)
+			max_v = max_vx;
+		else
+			max_v = max_vz;
+	else
+		if(max_vy > max_vz)
+			max_v = max_vy;
+		else
+			max_v = max_vz;
+
+	//make sure all the fluid cell with layer = 0, others = -1
+	int iter = int(max_v * dt * hi) + 2;
+
+#pragma omp parallel for
+	for(int k = 1; k <= iter; k++)
+	{
+		int start[3], end[3], du[3];
+		int maxu[3] = {NUMGRIDX, NUMGRIDY, NUMGRIDZ};
+		for(int i = 0; i < 3; i++)
+		{
+			du[i] = (rand() % 2 == 0)? 1 : -1;
+			if(du[i] > 0)
+			{
+				start[i] = 0;
+				end[i] = maxu[i];
+			}
+			else
+			{
+				start[i] = maxu[i]-1;
+				end[i] = -1;
+			}
+		}
+		for(int z = start[2]; z != end[2]; z += du[2])
+			for(int y = start[1]; y != end[1]; y += du[1])
+				for(int x = start[0]; x != end[0]; x += du[0])
+				{
+					if(type[IX(x, y, z)] == AIR && layer[IX(x, y, z)] == -1)
+					{
+						int nei = 0;
+						float velo[] = {0, 0, 0};
+						for(int j = 0; j < 6; j++)
+						{
+							int xx = x + dir[j][0];
+							int yy = y + dir[j][1];
+							int zz = z + dir[j][2];
+							if(layer[IX(xx, yy, zz)] == k-1)
+							{
+								nei ++;
+								velo[0] += Vx[IX(xx, yy, zz)];
+								velo[1] += Vy[IX(xx, yy, zz)];
+								velo[2] += Vz[IX(xx, yy, zz)];
+							}
+						}
+						if(nei > 0)
+						{
+							Vx[IX(x, y, z)] = velo[0] / nei;
+							Vy[IX(x, y, z)] = velo[1] / nei;
+							Vz[IX(x, y, z)] = velo[2] / nei;
+							layer[IX(x, y, z)] = k;
+						}
+					}
+				}
+	}
+}
+
+void FluidCube3D::errorRemove()
+{
+	double eps = 1e-12;
+
+	for(int i = 0; i < NUMGRID; i++)
+	{
+		if(fabs(Vx[i]) < eps)
+			Vx[i] = 0;
+		if(fabs(Vy[i]) < eps)
+			Vy[i] = 0;
+		if(fabs(Vz[i]) < eps)
+			Vz[i] = 0;
+	}
 }
 
 float FluidCube3D::getVelosity(int index, float x, float y, float z, float *u)
@@ -1611,21 +1536,6 @@ Pos3D FluidCube3D::traceParticle(int index, int x, int y, int z, bool backward)
 	return Pos3D(x0 + 0.5*t*(v0.x+v1.x)*hi, y0 + 0.5*t*(v0.y+v1.y)*hi, z0 + 0.5*t*(v0.z+v1.z)*hi);
 }
 
-void FluidCube3D::errorRemove()
-{
-	double eps = 1e-12;
-
-	for(int i = 0; i < NUMGRID; i++)
-	{
-		if(fabs(Vx[i]) < eps)
-			Vx[i] = 0;
-		if(fabs(Vy[i]) < eps)
-			Vy[i] = 0;
-		if(fabs(Vz[i]) < eps)
-			Vz[i] = 0;
-	}
-}
-
 void FluidCube3D::fillParticleInGrid(int x, int y, int z)
 {
 	int nump = PARTICLEPERGRID;
@@ -1649,48 +1559,218 @@ void FluidCube3D::fillParticleInGrid(int x, int y, int z)
 void FluidCube3D::report(clock_t simTime)
 {
 	REPORT(iteration);
-	REPORT(dt);
-
 	REPORT(max_vx);
 	REPORT(max_vy);
 	REPORT(max_vz);
 	REPORT(max_p);
 	float fluidShrink = 1.0 * fluidNum / originFluid;
 	REPORT(fluidShrink);
-
 	REPORT(totalTime);
 	std::cout<<"Simulation finished in "<<simTime<<"ms"<<std::endl;
 	LOGSEG;
 }
 
-void FluidCube3D::addFlowIn()
+void FluidCube3D::output(float *u)
 {
-	// fulid come from top 
-	for(int z = NUMGRIDZ/2.0-1; z <= NUMGRIDZ/2.0+1; z++)
-		for(int x = NUMGRIDX/2.0-1; x <= NUMGRIDX/2.0+1; x++)
-		{
-			type[IX(x, NUMGRIDY+1, z)] = type0[IX(x, NUMGRIDY, z)] = FLUIDIN;
-			fillParticleInGrid(x, NUMGRIDY, z);
-			Vy[IX(x, NUMGRIDY, z)] = Vy[IX(x, NUMGRIDY+1, z)] = -2;
-		}
-	
-	// fluid come from side
-	// for(int y = NUMGRIDY/2.0 - 5; y <= NUMGRIDY/2.0 + 5; y++)
-	// 	for(int x = NUMGRIDX/2.0 - 5; x <= NUMGRIDX/2.0 + 5; x++)
-	// 	{
-	// 		type[IX(x, y, 0)] = type0[IX(x, y, 0)] = FLUIDIN;
-	// 		fillParticleInGrid(x, y, 1);
-	// 		Vz[IX(x, y, 0)] = Vz[IX(x, y, 1)] = 2;
-	// 	}
+	if(!DEBUGPRINT)
+		return;  
+	for(int z = 10; z <= 15; z++)
+		for(int y = 10; y <= 15; y++)
+			for(int x = 5; x <= 10; x++)
+			{
+				std::cout<<u[IX(x, y, z)]<<' ';
+				if(x == 10)
+					std::cout<<std::endl;
+			}
+	LOGSEG;
+}
 
-	// fluid come from bottom
-	// for(int z = NUMGRIDZ/2.0 - 1; z <= NUMGRIDZ/2.0 + 1; z++)
-	// 	for(int x = NUMGRIDX/2.0 - 1; x <= NUMGRIDX/2.0 + 1; x++)
-	// 	{
-	// 		type[IX(x, 0, z)] = type0[IX(x, 1, z)] = FLUIDIN;
-	// 		fillParticleInGrid(x, 1, z);
-	// 		Vy[IX(x, 0, z)] = Vy[IX(x, 1, z)] = 5;
-	// 	}
+void FluidCube3D::render()
+{
+	glMatrixMode(GL_MODELVIEW);
+	// Reset transformations
+	glLoadIdentity();
+	glScalef(0.02f, 0.02f, 0.02f);
+
+	// Set the camera
+	gluLookAt(	px, py, pz,
+				0, 0, 0,
+				0.0f, 1.0f, 0.0f);
+
+	//clear the screen to a desired color in range [0-1] RGBA
+	glClearColor(0.5, 0.5, 0.5, 1);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	//enable blending for translucency
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glEnable(GL_POINT_SMOOTH);
+	glEnable(GL_LINE_SMOOTH);
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LESS);
+
+	int LENGTH = NUMGRIDX * GRIDSIZE;
+	//calculate divergence
+	if(RENDERTYPE == DIVERGENCE)
+	{
+#pragma omp parallel for
+		for(int z = 1; z <= NUMGRIDZ; z++)
+			for(int y = 1; y <= NUMGRIDY; y++)
+				for(int x = 1; x <= NUMGRIDX; x++)
+				{
+					if(type[IX(x, y, z)] != FLUID)
+						continue;
+					div[IX(x, y, z)] = (Vx[IX(x+1,y,z)]-Vx[IX(x,y,z)] + Vy[IX(x,y+1,z)]-Vy[IX(x,y,z)]
+										+ Vz[IX(x,y,z+1)]-Vz[IX(x,y,z)]);
+				}
+	}
+
+	glTranslatef(-LENGTH/2, -LENGTH/2, -LENGTH/2);
+
+// #pragma omp parallel for (cannot make rendering parallel)
+	for(int k = 0; k < NUMGRIDZ; k++)	
+		for(int j = 0; j < NUMGRIDY; j++)
+			for(int i = 0; i < NUMGRIDX; i++)
+			{
+				int x = i+1;
+				int y = j+1;
+				int z = k+1;
+				float color;
+				if(type[IX(x, y, z)] == SOLID)
+					glColor4f(0, 0.5, 0, 1);
+				else if(type[IX(x, y, z)] == FLUID)
+				{
+					switch(RENDERTYPE)
+					{
+					case FLUIDGRID:
+						glColor3f(0, 0, 0.7);
+						break;
+					case PRESSURE:
+						glColor3f(p[pos2index[IX(x,y,z)]]/max_p, 0, 0);
+						break;
+					case VELOSITYY:
+						if(Vy[IX(x, y, z)] >= 0)
+							glColor3f(Vy[IX(x, y, z)]/max_vy, 0, 0);
+						else
+							glColor3f(0, -Vy[IX(x, y, z)]/max_vy, 0);
+						break;
+					case VELOSITYX:
+						if(Vx[IX(x, y, z)] >= 0)
+							glColor3f(Vx[IX(x, y, z)]/max_vx, 0, 0);
+						else
+							glColor3f(0, -Vx[IX(x, y, z)]/max_vx, 0);
+						break;
+					case DIVERGENCE:
+						if(fabs(div[IX(x, y, z)]) > 1e-5)
+							glColor3f(1, 0, 0);
+						else
+							glColor3f(0, 0, 0.7);
+						break;
+					case PARTICLE:
+						continue;
+						break;
+					default:
+						glColor3f(0, 0, 0.7);
+						break;
+					//vorticity
+					//float w = 0.5 * (Vy[IX(x+1, y)] - Vy[IX(x-1, y)]);
+					//		  - 0.5 * (Vx[IX(x, y+1)] - Vx[IX(x, y-1)]);
+					}
+				}
+				else //AIR
+					continue;
+
+				//draw cube 
+				glBegin(GL_QUADS);
+				//hold k
+				glVertex3f(i*GRIDSIZE, j*GRIDSIZE, k*GRIDSIZE);
+				glVertex3f(i*GRIDSIZE, (j+1)*GRIDSIZE, k*GRIDSIZE);
+				glVertex3f((i+1)*GRIDSIZE, (j+1)*GRIDSIZE, k*GRIDSIZE);
+				glVertex3f((i+1)*GRIDSIZE, j*GRIDSIZE, k*GRIDSIZE);
+				//hold k+1
+				glVertex3f(i*GRIDSIZE, j*GRIDSIZE, (k+1)*GRIDSIZE);
+				glVertex3f((i+1)*GRIDSIZE, j*GRIDSIZE, (k+1)*GRIDSIZE);
+				glVertex3f((i+1)*GRIDSIZE, (j+1)*GRIDSIZE, (k+1)*GRIDSIZE);
+				glVertex3f(i*GRIDSIZE, (j+1)*GRIDSIZE, (k+1)*GRIDSIZE);
+				//hold j
+				glVertex3f(i*GRIDSIZE, j*GRIDSIZE, k*GRIDSIZE);
+				glVertex3f((i+1)*GRIDSIZE, j*GRIDSIZE, k*GRIDSIZE);
+				glVertex3f((i+1)*GRIDSIZE, j*GRIDSIZE, (k+1)*GRIDSIZE);
+				glVertex3f(i*GRIDSIZE, j*GRIDSIZE, (k+1)*GRIDSIZE);
+				//hold j+1
+				glVertex3f(i*GRIDSIZE, (j+1)*GRIDSIZE, k*GRIDSIZE);
+				glVertex3f(i*GRIDSIZE, (j+1)*GRIDSIZE, (k+1)*GRIDSIZE);
+				glVertex3f((i+1)*GRIDSIZE, (j+1)*GRIDSIZE, (k+1)*GRIDSIZE);
+				glVertex3f((i+1)*GRIDSIZE, (j+1)*GRIDSIZE, k*GRIDSIZE);
+				//hold i
+				glVertex3f(i*GRIDSIZE, j*GRIDSIZE, k*GRIDSIZE);
+				glVertex3f(i*GRIDSIZE, j*GRIDSIZE, (k+1)*GRIDSIZE);
+				glVertex3f(i*GRIDSIZE, (j+1)*GRIDSIZE, (k+1)*GRIDSIZE);
+				glVertex3f(i*GRIDSIZE, (j+1)*GRIDSIZE, k*GRIDSIZE);
+				//hold i+1
+				glVertex3f((i+1)*GRIDSIZE, j*GRIDSIZE, k*GRIDSIZE);
+				glVertex3f((i+1)*GRIDSIZE, (j+1)*GRIDSIZE, k*GRIDSIZE);
+				glVertex3f((i+1)*GRIDSIZE, (j+1)*GRIDSIZE, (k+1)*GRIDSIZE);
+				glVertex3f((i+1)*GRIDSIZE, j*GRIDSIZE, (k+1)*GRIDSIZE);
+				glEnd();
+				//if(GRIDSIZE >= 10 && type[IX(x, y)] == FLUID)
+				//	draw_velo(i, j, Vx[IX(x, y)], Vy[IX(x, y)]);
+			}
+
+	//draw particles
+	if(RENDERTYPE == PARTICLE)
+	{
+		glColor3f(0, 0, 0.7);
+		glBegin(GL_POINTS);
+		for(unsigned i = 0; i < particles.size(); i++)
+		{
+			glVertex3f((particles[i].x-1)*GRIDSIZE, (particles[i].y-1)*GRIDSIZE, (particles[i].z-1)*GRIDSIZE);
+		}
+		glEnd();
+	}
+
+	
+	//draw box
+	glColor3f(1, 1, 1);
+	glBegin(GL_LINES);
+	glVertex3f(0, 0, 0);
+	glVertex3f(0, LENGTH, 0);
+	glVertex3f(0, LENGTH, 0);
+	glVertex3f(LENGTH, LENGTH, 0);
+	glVertex3f(LENGTH, LENGTH, 0);
+	glVertex3f(LENGTH, 0, 0);
+	glVertex3f(LENGTH, 0, 0);
+	glVertex3f(0, 0, 0);
+
+	glVertex3f(0, 0, LENGTH);
+	glVertex3f(0, LENGTH, LENGTH);
+	glVertex3f(0, LENGTH, LENGTH);
+	glVertex3f(LENGTH, LENGTH, LENGTH);
+	glVertex3f(LENGTH, LENGTH, LENGTH);
+	glVertex3f(LENGTH, 0, LENGTH);
+	glVertex3f(LENGTH, 0, LENGTH);
+	glVertex3f(0, 0, LENGTH);
+
+	glVertex3f(0, 0, 0);
+	glVertex3f(0, 0, LENGTH);
+	glVertex3f(0, LENGTH, LENGTH);
+	glVertex3f(0, LENGTH, 0);
+	glVertex3f(LENGTH, LENGTH, LENGTH);
+	glVertex3f(LENGTH, LENGTH, 0);
+	glVertex3f(LENGTH, 0, LENGTH);
+	glVertex3f(LENGTH, 0, 0);
+	glEnd();
+
+	glutSwapBuffers();
+}
+
+void FluidCube3D::createBlobby(int frameNum)
+{
+	int frame = 0;
+	while(frame < frameNum)
+	{
+		simulate();
+		frame++;
+	}
 }
 
 void FluidCube3D::createBlobbySurface()
@@ -1811,82 +1891,4 @@ double FluidCube3D::blobbyKernel(double s2)
 		return (1-s2)*(1-s2)*(1-s2);
 	else
 		return 0;
-}
-
-void FluidCube3D::createBlobby(int frameNum)
-{
-	int frame = 0;
-	while(frame < frameNum)
-	{
-		simulate();
-		frame++;
-	}
-}
-
-void FluidCube3D::extrapolate()
-{
-	if(max_vx > max_vy)
-		if(max_vx > max_vz)
-			max_v = max_vx;
-		else
-			max_v = max_vz;
-	else
-		if(max_vy > max_vz)
-			max_v = max_vy;
-		else
-			max_v = max_vz;
-
-	//make sure all the fluid cell with layer = 0, others = -1
-	int iter = int(max_v * dt * hi) + 2;
-
-#pragma omp parallel for
-	for(int k = 1; k <= iter; k++)
-	{
-		int start[3], end[3], du[3];
-		int maxu[3] = {NUMGRIDX, NUMGRIDY, NUMGRIDZ};
-		for(int i = 0; i < 3; i++)
-		{
-			du[i] = (rand() % 2 == 0)? 1 : -1;
-			if(du[i] > 0)
-			{
-				start[i] = 0;
-				end[i] = maxu[i];
-			}
-			else
-			{
-				start[i] = maxu[i]-1;
-				end[i] = -1;
-			}
-		}
-		for(int z = start[2]; z != end[2]; z += du[2])
-			for(int y = start[1]; y != end[1]; y += du[1])
-				for(int x = start[0]; x != end[0]; x += du[0])
-				{
-					if(type[IX(x, y, z)] == AIR && layer[IX(x, y, z)] == -1)
-					{
-						int nei = 0;
-						float velo[] = {0, 0, 0};
-						for(int j = 0; j < 6; j++)
-						{
-							int xx = x + dir[j][0];
-							int yy = y + dir[j][1];
-							int zz = z + dir[j][2];
-							if(layer[IX(xx, yy, zz)] == k-1)
-							{
-								nei ++;
-								velo[0] += Vx[IX(xx, yy, zz)];
-								velo[1] += Vy[IX(xx, yy, zz)];
-								velo[2] += Vz[IX(xx, yy, zz)];
-							}
-						}
-						if(nei > 0)
-						{
-							Vx[IX(x, y, z)] = velo[0] / nei;
-							Vy[IX(x, y, z)] = velo[1] / nei;
-							Vz[IX(x, y, z)] = velo[2] / nei;
-							layer[IX(x, y, z)] = k;
-						}
-					}
-				}
-	}
 }

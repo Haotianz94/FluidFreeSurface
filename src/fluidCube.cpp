@@ -21,25 +21,25 @@ FluidCube::FluidCube()
 	assert(Configer::getConfiger()->getFloat(simulationStr.c_str(), "Viscosity", VISCOSITY)); 
 	assert(Configer::getConfiger()->getFloat(simulationStr.c_str(), "FrameRate", FRAMERATE)); 
 	assert(Configer::getConfiger()->getInt(simulationStr.c_str(), "MaxIteration", MAXITERATION));
-	assert(Configer::getConfiger()->getString(simulationStr.c_str(), "SceneType", SCENETYPE)); 
 	assert(Configer::getConfiger()->getString(simulationStr.c_str(), "RenderType", renderTypeStr));
-	assert(Configer::getConfiger()->getBool(simulationStr.c_str(), "Obstacle", OBSTACLE)); 
-	assert(Configer::getConfiger()->getBool(simulationStr.c_str(), "FlowIn", FLOWIN)); 
+	assert(Configer::getConfiger()->getString(simulationStr.c_str(), "SceneType", SCENETYPE)); 
+	assert(Configer::getConfiger()->getString(simulationStr.c_str(), "ObstacleType", OBSTACLETYPE)); 
+	assert(Configer::getConfiger()->getString(simulationStr.c_str(), "FlowInType", FLOWINTYPE)); 
 
 	// RenderType
-	if(renderTypeStr == std::string("PARTICLE"))
+	if(renderTypeStr.compare("PARTICLE") == 0)
 		RENDERTYPE = PARTICLE;
-	else if(renderTypeStr == std::string("PRESSURE"))
+	else if(renderTypeStr.compare("PRESSURE") == 0)
 		RENDERTYPE = PRESSURE;
-	else if(renderTypeStr == std::string("VELOSITYY"))
+	else if(renderTypeStr.compare("VELOSITYY") == 0)
 		RENDERTYPE = VELOSITYY;
-	else if(renderTypeStr == std::string("VELOSITYX"))
+	else if(renderTypeStr.compare("VELOSITYX") == 0)
 		RENDERTYPE = VELOSITYX;
-	else if(renderTypeStr == std::string("DIVERGENCE"))
+	else if(renderTypeStr.compare("DIVERGENCE") == 0)
 		RENDERTYPE = DIVERGENCE;
-	else if(renderTypeStr == std::string("FLUIDGRID"))
+	else if(renderTypeStr.compare("FLUIDGRID") == 0)
 		RENDERTYPE = FLUIDGRID;
-	else if(renderTypeStr == std::string("BLOBBY"))
+	else if(renderTypeStr.compare("BLOBBY") == 0)
 		RENDERTYPE = BLOBBY;
 	else
 	{

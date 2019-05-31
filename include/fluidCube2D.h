@@ -30,9 +30,6 @@ private:
 	std::vector<Pos2D> particles;
 	std::vector<Velo2D> velosities;
 
-	// scene
-	std::vector<Pos2D> obstacle;
-
 	// status
 	float max_vx;
 	float max_vy;

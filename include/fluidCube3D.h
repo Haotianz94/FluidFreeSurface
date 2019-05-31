@@ -34,9 +34,6 @@ private:
 	std::vector<Pos3D> particles;
 	std::vector<Velo3D> velosities;
 
-	// scene
-	std::vector<Pos3D> obstacle;
-	
 	// status
 	float max_vx;
 	float max_vy;
@@ -74,6 +71,8 @@ private:
 
 	// scene
 	void addFlowIn();
+	void initFluid();
+	void initSolid();
 
 	// output
 	void output(float *u);

@@ -60,9 +60,9 @@ protected:
 	float *fai_f;
 
 	// scene
-	bool OBSTACLE;
-	bool FLOWIN;
 	std::string SCENETYPE;
+	std::string FLOWINTYPE;
+	std::string OBSTACLETYPE;
 	int originFluid;
 
 	// simulate/render
