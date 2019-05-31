@@ -218,6 +218,13 @@ void FluidCube3D::initSolid()
 		std::string obj_path;
 		assert(Configer::getConfiger()->getString("Simulation3D", "ObjectPath", obj_path));
 		QuadMesh obstacle(obj_path);
+		obstacle.normalize(NUMGRIDX);
+		obstacle.dumpObj("../obj/test.obj");
+		obstacle.calculateHeightMap();
+		for(int x = 1; x <= NUMGRIDX; x++)
+			for(int z = 1; z <= NUMGRIDZ; z++)
+				for(int y = 1; y <= obstacle.getHeight(x-1, z-1); y++)
+					type[IX(x, y, z)] = type0[IX(x, y, z)] = SOLID;
 	}
 
 	if(OBSTACLETYPE.compare("CENTERWALL") == 0)
@@ -233,7 +240,14 @@ void FluidCube3D::addFlowIn()
 {
 	if(SCENETYPE.compare("VOLCANO") == 0)
 	{
-
+		for(int z = NUMGRIDZ/2.0 - 10; z <= NUMGRIDZ/2.0 + 10; z+=4)
+			for(int x = NUMGRIDX/2.0 - 10; x <= NUMGRIDX/2.0 + 10; x+=4)
+			{
+				int height = NUMGRIDY/2.0 - 10;
+				type[IX(x, height, z)] = type0[IX(x, height, z)] = FLUIDIN;
+				fillParticleInGrid(x, height, z);
+				Vy[IX(x, height, z)] = Vy[IX(x, height+1, z)] = 0.01;
+			}
 	}
 
 	if(FLOWINTYPE.compare("TOP") == 0)
@@ -278,16 +292,14 @@ void FluidCube3D::simulate()
 	bool draw = calculateTimeStep();
 	
 	addFlowIn();
-	if(fluidNum != 0)
-	{
-		updateParticles();
-		
-		updateGrid();
-		
-		set_bnd();
-		
-		vel_step();
-	}
+
+	updateParticles();
+	
+	updateGrid();
+	
+	set_bnd();
+	
+	vel_step();
 
 	clock_t simTime = clock() - start;
 	report(simTime);
@@ -303,6 +315,8 @@ void FluidCube3D::simulate()
 
 void FluidCube3D::vel_step()
 {
+	if(fluidNum == 0)
+		return; 
 	/*
 	SWAP(Vx0, Vx);
 	SWAP(Vy0, Vy);
@@ -611,6 +625,9 @@ void FluidCube3D::set_bnd()
 		Vy[IX(x, NUMGRIDY+1)] = -Vy[IX(x, NUMGRIDY)];
 	}
 	*/
+	if(fluidNum == 0)
+		return; 
+
 #pragma omp parallel for
 	for(int z = 1; z <= NUMGRIDZ; z++)
 		for(int y = 1; y <= NUMGRIDY; y++)
@@ -1167,6 +1184,9 @@ void FluidCube3D::updateGrid()
 				if(type[IX(x, y, z)] == FLUID)
 					pos2index[IX(x, y, z)] = fluidNum++;
 
+	if(fluidNum == 0)
+		return; 
+
 #pragma omp parallel for
 	for(int z = 1; z <= NUMGRIDZ; z++)
 		for(int y = 1; y <= NUMGRIDY; y++)
@@ -1636,7 +1656,7 @@ void FluidCube3D::render()
 				int z = k+1;
 				float color;
 				if(type[IX(x, y, z)] == SOLID)
-					glColor4f(0, 0.5, 0, 1);
+					glColor4f(0, 0.25, 0, 1);
 				else if(type[IX(x, y, z)] == FLUID)
 				{
 					switch(RENDERTYPE)
@@ -1719,7 +1739,7 @@ void FluidCube3D::render()
 	//draw particles
 	if(RENDERTYPE == PARTICLE)
 	{
-		glColor3f(0, 0, 0.7);
+		glColor3f(0.3, 0, 0);
 		glBegin(GL_POINTS);
 		for(unsigned i = 0; i < particles.size(); i++)
 		{
@@ -1876,7 +1896,7 @@ void FluidCube3D::createBlobbySurface()
 
 	for(unsigned i = 0; i < Ntri; i++)
 	{
-		fout<< "f " <<builder.m_piTriangleIndices[i*3]+1<<' '<<builder.m_piTriangleIndices[i*3+1]+1<<' '<<builder.m_piTriangleIndices[i*3+2]+1<<std::endl;
+		fout<< "f " <<builder.m_piTriangleIndices[i*3]+1<<' '<<builder.m_piTriangleIndices[i*3+2]+1<<' '<<builder.m_piTriangleIndices[i*3+1]+1<<std::endl;
 	}
 	fout.close();
 
