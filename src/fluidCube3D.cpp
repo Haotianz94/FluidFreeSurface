@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <fstream>
 #include <omp.h>
+#include <sys/stat.h>
 
 
 #define IX(x, y, z) ((x) + (y)*(NUMGRIDX+2) + (z)*(NUMGRIDX+2)*(NUMGRIDY+2) )
@@ -217,13 +218,13 @@ void FluidCube3D::initSolid()
 	{
 		std::string obj_path;
 		assert(Configer::getConfiger()->getString("Simulation3D", "ObjectPath", obj_path));
-		QuadMesh obstacle(obj_path);
-		obstacle.normalize(NUMGRIDX);
-		obstacle.dumpObj("../obj/test.obj");
-		obstacle.calculateHeightMap();
+		volcano = new QuadMesh(obj_path);
+		volcano->normalize(NUMGRIDX);
+		volcano->dumpObj("../obj/volcano_simulate.obj");
+		volcano->calculateHeightMap(NUMGRIDX);
 		for(int x = 1; x <= NUMGRIDX; x++)
 			for(int z = 1; z <= NUMGRIDZ; z++)
-				for(int y = 1; y <= obstacle.getHeight(x-1, z-1); y++)
+				for(int y = 1; y <= volcano->getHeight(x-1, z-1)+1; y++)
 					type[IX(x, y, z)] = type0[IX(x, y, z)] = SOLID;
 	}
 
@@ -240,14 +241,26 @@ void FluidCube3D::addFlowIn()
 {
 	if(SCENETYPE.compare("VOLCANO") == 0)
 	{
-		for(int z = NUMGRIDZ/2.0 - 10; z <= NUMGRIDZ/2.0 + 10; z+=4)
-			for(int x = NUMGRIDX/2.0 - 10; x <= NUMGRIDX/2.0 + 10; x+=4)
+		for(int z = NUMGRIDZ/2.0 - 30; z <= NUMGRIDZ/2.0 + 30; z+=1)
+			for(int x = NUMGRIDX/2.0 - 40; x <= NUMGRIDX/2.0 + 20; x+=1)
 			{
-				int height = NUMGRIDY/2.0 - 10;
+				// int height = NUMGRIDY/2.0-10;
+				int height = volcano->getHeight(x-1, z-1) + 2;
+				type[IX(x, height, z)] = type0[IX(x, height, z)] = FLUIDIN;
+				fillParticleInGrid(x, height, z);
+				Vy[IX(x, height, z)] = Vy[IX(x, height+1, z)] = 1;
+			}
+
+		for(int z = 1; z <= NUMGRIDZ; z+=30)
+			for(int x = 1; x <= NUMGRIDX; x+=30)
+			{
+				// int height = NUMGRIDY/2.0-10;
+				int height = volcano->getHeight(x-1, z-1) + 2;
 				type[IX(x, height, z)] = type0[IX(x, height, z)] = FLUIDIN;
 				fillParticleInGrid(x, height, z);
 				Vy[IX(x, height, z)] = Vy[IX(x, height+1, z)] = 0.01;
 			}
+
 	}
 
 	if(FLOWINTYPE.compare("TOP") == 0)
@@ -306,10 +319,10 @@ void FluidCube3D::simulate()
 
 	if(draw)
 	{	
-		if(CREATEBLOBBY)
-			createBlobbySurface();
-		else
+		if(!CREATEBLOBBY)
 			render();
+		else if(iteration % blobbyFrameStride == 0)
+			createBlobbySurface();
 	}
 }
 
@@ -1017,24 +1030,26 @@ bool FluidCube3D::calculateTimeStep()
 	totalTime += dt;
 	return true;
 
-	if(ctime + dt >= frameTime)
-	{
-		dt = frameTime - ctime;
-		totalTime += dt;
-		ctime = 0;
-		return true;
-	}
-	else
-	{
-		ctime += dt;
-		totalTime += dt;
-		return false;
-	}
-	//if(dt > h2 /(6*VISCOSITY))
+	// if(ctime + dt >= frameTime)
+	// {
+	// 	dt = frameTime - ctime;
+	// 	totalTime += dt;
+	// 	ctime = 0;
+	// 	return true;
+	// }
+	// else
+	// {
+	// 	ctime += dt;
+	// 	totalTime += dt;
+	// 	return false;
+	// }
 }
 
 void FluidCube3D::updateParticles()
 {
+	std::vector<Pos3D> particles_new;
+	std::vector<Velo3D> velosities_new;
+// #pragma omp parallel for
 	for(unsigned i = 0; i < particles.size(); i++)
 	{
 		float x0 = particles[i].x;
@@ -1045,34 +1060,11 @@ void FluidCube3D::updateParticles()
 		float x1 = x0 + dt * v0.x * hi;
 		float y1 = y0 + dt * v0.y * hi;
 		float z1 = z0 + dt * v0.z * hi;
-		//if particle out of boundary??
-		/*
-		if(x1 < 1 || x1 >= NUMGRIDX+1 || y1 < 1 || y1 >= NUMGRIDY+1 || z1 < 1 || z1 >= NUMGRIDZ+1)
-		{
-			std::cout<<"Particle out of bound"<<std::endl;
-			REPORT(x1);
-			REPORT(y1);
-			REPORT(z1);
-			system("pause");
-		}
-		if(x1 < 1)
-			x1 = 1;
-		else if(x1 >= NUMGRIDX+1)
-			x1 = NUMGRIDX+0.5;//or 0.999 which is better?
-		if(y1 < 1)
-			y1 = 1;
-		else if(y1 >= NUMGRIDY+1)
-			y1 = NUMGRIDY+0.5;
-		if(z1 < 1)
-			z1 = 1;
-		else if(z1 >= NUMGRIDZ+1)
-			z1 = NUMGRIDZ+0.5;
-		*/
 
 		if(type[IX(int(x1), int(y1), int(z1))] == AIR)
 		{
-			particles[i] = Pos3D(x1, y1, z1);
-			velosities[i] = v0;
+			particles_new.push_back(Pos3D(x1, y1, z1));
+			velosities_new.push_back(v0);
 			continue;
 		}
 		else if(type[IX(int(x1), int(y1), int(z1))] == SOLID)
@@ -1089,38 +1081,16 @@ void FluidCube3D::updateParticles()
 				z1 = int(z0)+0.99;
 			else if(int(z1) < int(z0))
 				z1 = int(z0)+0.01;
-			particles[i] = Pos3D(x1, y1, z1);
-			velosities[i] = v0;
+			particles_new.push_back(Pos3D(x1, y1, z1));
+			velosities_new.push_back(v0);
 			continue;
 		}
 
+		// if FLUID
 		Velo3D v1 = getVelosity(x1, y1, z1, Vx, Vy, Vz);
 		x1 = x0 + dt * 0.5 * (v0.x + v1.x) * hi;
 		y1 = y0 + dt * 0.5 * (v0.y + v1.y) * hi;
 		z1 = z0 + dt * 0.5 * (v0.z + v1.z) * hi;
-		//if particle out of boundary???
-		/*
-		if(x1 < 1 || x1 >= NUMGRIDX+1 || y1 < 1 || y1 >= NUMGRIDY+1 || z1 < 1 || z1 >= NUMGRIDZ+1)
-		{
-			std::cout<<"Particle out of bound"<<std::endl;
-			REPORT(x1);
-			REPORT(y1);
-			REPORT(z1);
-			system("pause");
-		}
-		if(x1 < 1)
-			x1 = 1;
-		else if(x1 >= NUMGRIDX+1)
-			x1 = NUMGRIDX+0.5;
-		if(y1 < 1)
-			y1 = 1;
-		else if(y1 >= NUMGRIDY+1)
-			y1 = NUMGRIDY+0.5;
-		if(z1 < 1)
-			z1 = 1;
-		else if(z1 >= NUMGRIDZ+1)
-			z1 = NUMGRIDZ+0.5;
-		*/
 
 		if(type[IX(int(x1), int(y1), int(z1))] == SOLID)
 		{
@@ -1138,9 +1108,11 @@ void FluidCube3D::updateParticles()
 				z1 = int(z0)+0.01;
 		}
 		
-		particles[i] = Pos3D(x1, y1, z1);
-		velosities[i] = Velo3D((v0.x+v1.x)*0.5, (v0.y+v1.y)*0.5, (v0.z+v1.z)*0.5);
+		particles_new.push_back(Pos3D(x1, y1, z1));
+		velosities_new.push_back(Velo3D((v0.x+v1.x)*0.5, (v0.y+v1.y)*0.5, (v0.z+v1.z)*0.5));
 	}
+	particles = particles_new;
+	velosities = velosities_new;
 }
 
 void FluidCube3D::updateGrid()
@@ -1481,14 +1453,13 @@ float FluidCube3D::getVelosity(int index, float x, float y, float z, float *u)
 		break;
 	}
 
-	if(x < 0 || x >= NUMGRIDX+1 || y < 0 || y >= NUMGRIDY+1 || z < 0 || z >= NUMGRIDZ+1)
-	{
-		std::cout<<"Get velosity out of bound"<<std::endl;
-		REPORT(x);
-		REPORT(y);
-		REPORT(z);
-		//system("pause");
-	}
+	// if(x < 0 || x >= NUMGRIDX+1 || y < 0 || y >= NUMGRIDY+1 || z < 0 || z >= NUMGRIDZ+1)
+	// {
+	// 	std::cout<<"Get velosity out of bound"<<std::endl;
+	// 	REPORT(x);
+	// 	REPORT(y);
+	// 	REPORT(z);
+	// }
 	if(x < 0)
 		x = 0;
 	if(x >= NUMGRIDX+1)
@@ -1783,44 +1754,50 @@ void FluidCube3D::render()
 	glutSwapBuffers();
 }
 
-void FluidCube3D::createBlobby(int frameNum)
+void FluidCube3D::createBlobby()
 {
-	int frame = 0;
-	while(frame < frameNum)
+	char obj_dir_base[] = "../surface3D";
+	mkdir(obj_dir_base, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+
+	clock_t timeStamp = clock();
+	sprintf(obj_dir, "%s/%ld", obj_dir_base, timeStamp);
+	mkdir(obj_dir, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+
+	int frameSum = 1000;
+	Configer::getConfiger()->getInt("Blobby", "FrameSum", frameSum);
+	Configer::getConfiger()->getInt("Blobby", "FrameStride", blobbyFrameStride);
+	while(iteration < frameSum)
 	{
 		simulate();
-		frame++;
 	}
 }
 
 void FluidCube3D::createBlobbySurface()
 {
-	// if(iteration != 30)
-	// 	return;
+	int blobbyGridSize = 1;
+	assert(Configer::getConfiger()->getInt("Blobby", "GridSize", blobbyGridSize));
 
-	int gridSize = 10;
-
-	double r = 1.0 * gridSize / PARTICLEPERGRID;
+	double r = 1.0 * blobbyGridSize / PARTICLEPERGRID;
 	double h = 3 * r;
 	double h2i = 1 / (h*h);
 	double thresh = blobbyKernel( (r*r) / (h*h) );
 	
 	int border = 6;
-	float *scalarField = new float [(NUMGRIDX+border) * (NUMGRIDY+border) * (NUMGRIDZ+border) * gridSize * gridSize * gridSize]; 
+	float *scalarField = new float [(NUMGRIDX+border) * (NUMGRIDY+border) * (NUMGRIDZ+border) * blobbyGridSize * blobbyGridSize * blobbyGridSize]; 
 
 	PRINT("Start to sample the implict function on the grid...");
 	clock_t start = clock();
 
 #pragma omp parallel for
-	for(int z = 0; z < (NUMGRIDZ+border) * gridSize; z++)
-		for(int y = 0; y < (NUMGRIDY+border) * gridSize; y++)
-			for(int x = 0; x < (NUMGRIDX+border) * gridSize; x++)
+	for(int z = 0; z < (NUMGRIDZ+border) * blobbyGridSize; z++)
+		for(int y = 0; y < (NUMGRIDY+border) * blobbyGridSize; y++)
+			for(int x = 0; x < (NUMGRIDX+border) * blobbyGridSize; x++)
 			{
-				int index = x + y * (NUMGRIDX+border) * gridSize + z * (NUMGRIDX+border) * gridSize * (NUMGRIDY+border) * gridSize;
+				int index = x + y * (NUMGRIDX+border) * blobbyGridSize + z * (NUMGRIDX+border) * blobbyGridSize * (NUMGRIDY+border) * blobbyGridSize;
 
-				int X = x / gridSize - border/2;
-				int Y = y / gridSize - border/2;
-				int Z = z / gridSize - border/2;
+				int X = x / blobbyGridSize - border/2;
+				int Y = y / blobbyGridSize - border/2;
+				int Z = z / blobbyGridSize - border/2;
 
 				/*
 				if(BOUNDED(X,Y,Z) && type[IX(X, Y, Z)] == FLUID && neighNoneSolid[IX(X, Y, Z)] - neighAir[IX(X, Y, Z)] == 6)
@@ -1849,9 +1826,9 @@ void FluidCube3D::createBlobbySurface()
 						continue;
 					for(unsigned j = 0; j < list->size(); j++)
 					{
-						float x0 = (particles[list->at(j)].x + border/2) * gridSize;
-						float y0 = (particles[list->at(j)].y + border/2) * gridSize;
-						float z0 = (particles[list->at(j)].z + border/2) * gridSize;
+						float x0 = (particles[list->at(j)].x + border/2) * blobbyGridSize;
+						float y0 = (particles[list->at(j)].y + border/2) * blobbyGridSize;
+						float z0 = (particles[list->at(j)].z + border/2) * blobbyGridSize;
 						F += blobbyKernel(DISTANCE2(x0, y0, z0, x, y, z) * h2i);
 						//double ker = blobbyKernel(DISTANCE2(x0, y0, z0, x, y, z) * h2i);
 						//Xu += ker * Eigen::Vector3d(x0, y0, z0);
@@ -1875,23 +1852,24 @@ void FluidCube3D::createBlobbySurface()
 	//thresh = 0;
 	//create surface and write to obj
 	CIsoSurface<float> builder;
-	builder.GenerateSurface(scalarField, thresh, (NUMGRIDX+border)*gridSize-1, (NUMGRIDY+border)*gridSize-1, (NUMGRIDZ+border)*gridSize-1, 1, 1, 1);
+	builder.GenerateSurface(scalarField, thresh, (NUMGRIDX+border)*blobbyGridSize-1, (NUMGRIDY+border)*blobbyGridSize-1, (NUMGRIDZ+border)*blobbyGridSize-1, 1, 1, 1);
 
 	if(!builder.IsSurfaceValid())
 		system("pause");
 
-	char prefix[] = "../surface3D/surface";
-	char suffix[] = ".obj";
-	char name[100];
-	sprintf(name, "%s%03d%s", prefix, iteration, suffix);
-	std::ofstream fout(name);
+	char ext[] = ".obj";
+	char file_path[100];
+	sprintf(file_path, "%s/%03d%s", obj_dir, iteration, ext);
+	std::ofstream fout(file_path);
 	unsigned Nver = builder.m_nVertices;
 	unsigned Ntri = builder.m_nTriangles;
 	
 	fout<<"#  v "<<Nver<<" f "<<Ntri<<std::endl;
 	for(unsigned i = 0; i < Nver; i++)
 	{
-		fout << "v " <<builder.m_ppt3dVertices[i][0]<<' '<<builder.m_ppt3dVertices[i][1]<<' '<<builder.m_ppt3dVertices[i][2]<<std::endl;
+		fout << "v " <<builder.m_ppt3dVertices[i][0] - border/2 <<' ' \
+					 <<builder.m_ppt3dVertices[i][1] - border/2 <<' ' \
+					 <<builder.m_ppt3dVertices[i][2] - border/2 << std::endl;
 	}
 
 	for(unsigned i = 0; i < Ntri; i++)

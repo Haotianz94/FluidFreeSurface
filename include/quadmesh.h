@@ -45,7 +45,7 @@ public:
 	void loadObj(std::string);
 	void dumpObj(std::string);
 	void normalize(int max_length);
-	void calculateHeightMap();
+	void calculateHeightMap(int max_length);
 	int getHeight(int x, int z);
 };
 

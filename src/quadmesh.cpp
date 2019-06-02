@@ -48,21 +48,22 @@ void QuadMesh::loadObj(std::string file_path)
 		}
 		else if(c1 == 'v')
 		{
-			fin.get(c2);
-			fin >> x >> y >> z;
-			
+			fin.get(c2);			
 			if(c2 == ' ')
 			{
+				fin >> x >> y >> z;
 				vertices_.push_back(Eigen::Vector3f(x, y, z));
 				num_vertex_ ++;
 			}
 			else if(c2 == 't')
 			{
-				vertices_uv_.push_back(Eigen::Vector3f(x, y, z));
+				fin >> x >> y;
+				vertices_uv_.push_back(Eigen::Vector3f(x, y, 0));
 				num_vertex_uv_ ++;
 			}
 			else if(c2 == 'n')
 			{
+				fin >> x >> y >> z;
 				normals_.push_back(Eigen::Vector3f(x, y, z));
 				num_normal_ ++;
 			}
@@ -86,7 +87,7 @@ void QuadMesh::dumpObj(std::string obj_path)
 {
 	std::ofstream fout(obj_path);
 
-	fout << "mtllib volcano_01.mtl\n";
+	fout << "mtllib volcano.mtl\n";
 
 	// Dump all vertices
 	fout << "# vertices " << num_vertex_ << "\n";
@@ -131,8 +132,8 @@ QuadMesh::~QuadMesh()
 void QuadMesh::normalize(int max_length)
 {
 	max_length_ = max_length;
-	float min_x, min_y, min_z;
-	float max_x, max_y, max_z;
+	float min_x = 1e9, min_y = 1e9, min_z = 1e9;
+	float max_x = -1e9, max_y = -1e9, max_z = -1e9;
 	for(auto& v : vertices_)
 	{
 		min_x = std::min(min_x, v[0]);
@@ -141,21 +142,20 @@ void QuadMesh::normalize(int max_length)
 		max_y = std::max(max_y, v[1]);
 		min_z = std::min(min_z, v[2]);
 		max_z = std::max(max_z, v[2]);
-		REPORT(v[0]);
 	}
-	REPORT(min_x);
 	float scale = 1.0f * max_length / std::max(std::max(max_x - min_x, max_y - min_y), max_z - min_z);
-	Eigen::Vector3f shift(min_x * scale, min_y * scale*3, min_z * scale); 
+	Eigen::Vector3f shift(min_x * scale, min_y * scale, min_z * scale); 
 	REPORT(scale);
 	std::cout << shift << std::endl;
 	for(auto& v : vertices_)
 	{
-		v = Eigen::Vector3f(v[0] * scale, v[1] * scale*3, v[2] * scale) - shift;
+		v = Eigen::Vector3f(v[0] * scale, v[1] * scale, v[2] * scale) - shift;
 	}
 }
 
-void QuadMesh::calculateHeightMap()
+void QuadMesh::calculateHeightMap(int max_length)
 {
+	max_length_ = max_length;
 	height_map_ = new int[max_length_ * max_length_];
 	memset(height_map_, 0, sizeof(int) * max_length_ * max_length_);
 	for(auto& v : vertices_)
@@ -165,6 +165,19 @@ void QuadMesh::calculateHeightMap()
 		int z = int(v[2]);
 		height_map_[z * max_length_ + x] = std::max(height_map_[z * max_length_ + x], y);
 	}
+	for(int j = 0; j < max_length_; j++)
+		for(int i = 0; i < max_length_; i++)
+		{
+			if(height_map_[j * max_length_ + i] == 0)
+			{
+				for(int k = i; k < max_length_; k++)
+					if(height_map_[j * max_length_ + k] != 0)
+					{
+						height_map_[j * max_length_ + i] = height_map_[j * max_length_ + k];
+						break;
+					} 
+			}
+		}
 }
 
 int QuadMesh::getHeight(int x, int z)

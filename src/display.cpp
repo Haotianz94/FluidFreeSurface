@@ -133,7 +133,7 @@ void keyEvent(unsigned char _key, int _x, int _y){
 			break;
 	}
 
-	if(SIMULATION2D)
+	if(!SIMULATION2D)
 	{
 		switch (_key)
 		{

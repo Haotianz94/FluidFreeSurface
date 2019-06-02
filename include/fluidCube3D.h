@@ -2,7 +2,7 @@
 #define _FLUIDCUBE3D_H_
 
 #include "fluidCube.h"
-
+#include "quadmesh.h"
 
 struct Pos3D
 {
@@ -41,9 +41,14 @@ private:
 	
 	//Blobby
 	Eigen::Vector3i dir2[27];
+	char obj_dir[100];
+	int blobbyFrameStride;
 
 	//Extrapolate
 	int *layer;
+
+	//volcano
+	QuadMesh* volcano;
 
 private:
 	// simulate
@@ -87,7 +92,7 @@ public:
 	~FluidCube3D();
 	void simulate();
 	void render();
-	void createBlobby(int);
+	void createBlobby();
 };
 
 #endif
