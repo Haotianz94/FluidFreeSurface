@@ -52,7 +52,7 @@ protected:
 
 	// Conjugate Gradient
 	Eigen::SparseMatrix<double> A;
-	Eigen::SparseLU<Eigen::SparseMatrix<double>> solver;
+	Eigen::BiCGSTAB<Eigen::SparseMatrix<double>> solver;
 	Eigen::VectorXd p;
 
 	// advection using BFECC
