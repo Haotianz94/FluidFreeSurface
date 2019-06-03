@@ -49,6 +49,7 @@ private:
 
 	//volcano
 	QuadMesh* volcano;
+	QuadMesh* ground;
 
 private:
 	// simulate

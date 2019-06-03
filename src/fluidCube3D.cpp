@@ -197,27 +197,23 @@ void FluidCube3D::initFluid()
 					fillParticleInGrid(x, y, z);
 				}
 	}
-	else if(SCENETYPE.compare("VOLCANO") == 0)
-	{
-
-	}
 	else if(SCENETYPE.compare("NONE") == 0)
 	{
 
 	}
-	else
-	{
-		PRINT("SceneType not known!");
-		exit(0);
-	}
+	// else
+	// {
+	// 	PRINT("SceneType not known!");
+	// 	exit(0);
+	// }
 }
 
 void FluidCube3D::initSolid()
 {	
-	if(SCENETYPE.compare("VOLCANO") == 0)
+	if(SCENETYPE.compare("VOLCANO") == 0 || SCENETYPE.compare("VOLCANOBURST") == 0)
 	{
 		std::string obj_path;
-		assert(Configer::getConfiger()->getString("Simulation3D", "ObjectPath", obj_path));
+		assert(Configer::getConfiger()->getString("Volcano", "VolcanoPath", obj_path));
 		volcano = new QuadMesh(obj_path);
 		volcano->normalize(NUMGRIDX);
 		volcano->dumpObj("../obj/volcano_simulate.obj");
@@ -227,8 +223,20 @@ void FluidCube3D::initSolid()
 				for(int y = 1; y <= volcano->getHeight(x-1, z-1)+1; y++)
 					type[IX(x, y, z)] = type0[IX(x, y, z)] = SOLID;
 	}
-
-	if(OBSTACLETYPE.compare("CENTERWALL") == 0)
+	else if(SCENETYPE.compare("GROUND") == 0)
+	{
+		std::string obj_path;
+		assert(Configer::getConfiger()->getString("Volcano", "GroundPath", obj_path));
+		ground = new QuadMesh(obj_path);
+		ground->normalize(NUMGRIDX);
+		ground->dumpObj("../obj/ground_simulate.obj");
+		ground->calculateHeightMap(NUMGRIDX);
+		for(int x = 1; x <= NUMGRIDX; x++)
+			for(int z = 1; z <= NUMGRIDZ; z++)
+				for(int y = 1; y <= ground->getHeight(x-1, z-1)+1; y++)
+					type[IX(x, y, z)] = type0[IX(x, y, z)] = SOLID;
+	}
+	else if(OBSTACLETYPE.compare("CENTERWALL") == 0)
 	{
 		for(int z = NUMGRIDZ/16.0*7; z <= NUMGRIDZ/16.0*9; z++)
 			for(int y = 1; y <= NUMGRIDY/3.0*2; y++)
@@ -242,25 +250,65 @@ void FluidCube3D::addFlowIn()
 	if(SCENETYPE.compare("VOLCANO") == 0)
 	{
 		for(int z = NUMGRIDZ/2.0 - 30; z <= NUMGRIDZ/2.0 + 30; z+=1)
-			for(int x = NUMGRIDX/2.0 - 40; x <= NUMGRIDX/2.0 + 20; x+=1)
+			for(int x = NUMGRIDX/2.0 - 30; x <= NUMGRIDX/2.0 + 30; x+=1)
 			{
-				// int height = NUMGRIDY/2.0-10;
 				int height = volcano->getHeight(x-1, z-1) + 2;
 				type[IX(x, height, z)] = type0[IX(x, height, z)] = FLUIDIN;
 				fillParticleInGrid(x, height, z);
-				Vy[IX(x, height, z)] = Vy[IX(x, height+1, z)] = 1;
+				Vy[IX(x, height, z)] = Vy[IX(x, height+1, z)] = 4;
 			}
 
-		for(int z = 1; z <= NUMGRIDZ; z+=30)
-			for(int x = 1; x <= NUMGRIDX; x+=30)
+		// for(int z = NUMGRIDZ/2.0 - 50; z <= NUMGRIDZ/2.0 + 50; z+=1)
+		// 	for(int x = NUMGRIDX/2.0 - 50; x <= NUMGRIDX/2.0 + 50; x+=1)
+		// 	{
+		// 		int height = volcano->getHeight(x-1, z-1) + 2;
+		// 		type[IX(x, height, z)] = type0[IX(x, height, z)] = FLUIDIN;
+		// 		fillParticleInGrid(x, height, z);
+		// 		Vy[IX(x, height, z)] = Vy[IX(x, height+1, z)] = 2;
+		// }
+	}
+	if(SCENETYPE.compare("VOLCANOBURST") == 0)
+	{	
+		// srand(0);
+		// for(int z = NUMGRIDZ/2.0 - 5; z <= NUMGRIDZ/2.0 + 5; z+=5)
+		// 	for(int x = NUMGRIDX/2.0 - 5; x <= NUMGRIDX/2.0 + 5; x+=5)
+		// 	{
+		// 		int height = volcano->getHeight(x-1, z-1) + 2;
+		// 		type[IX(x, height, z)] = type0[IX(x, height, z)] = FLUIDIN;
+		// 		fillParticleInGrid(x, height, z);
+		// 		Vy[IX(x, height, z)] = Vy[IX(x, height+1, z)] = rand() % 10 + 15;
+		// 		Vx[IX(x, height, z)] = Vx[IX(x, height+1, z)] = rand() % 6 - 3;
+		// 		Vz[IX(x, height, z)] = Vz[IX(x, height+1, z)] = rand() % 6 - 3;
+		//  }
+
+		// srand(0);
+		for(int z = NUMGRIDZ/2.0 - 25; z <= NUMGRIDZ/2.0 + 25; z+=5)
+			for(int x = NUMGRIDX/2.0 - 35; x <= NUMGRIDX/2.0 + 15; x+=5)
 			{
-				// int height = NUMGRIDY/2.0-10;
 				int height = volcano->getHeight(x-1, z-1) + 2;
 				type[IX(x, height, z)] = type0[IX(x, height, z)] = FLUIDIN;
 				fillParticleInGrid(x, height, z);
-				Vy[IX(x, height, z)] = Vy[IX(x, height+1, z)] = 0.01;
+				Vy[IX(x, height, z)] = Vy[IX(x, height+1, z)] = rand() % 30 + 30;
+				Vx[IX(x, height, z)] = Vx[IX(x, height+1, z)] = rand() % 10 - 5;
+				Vz[IX(x, height, z)] = Vz[IX(x, height+1, z)] = rand() % 10 - 5;
 			}
-
+	}
+	else if(SCENETYPE.compare("GROUND") == 0)
+	{
+		srand(0);
+		for(int z = 1; z <= NUMGRIDZ; z+=20)
+			for(int x = 1; x <= NUMGRIDX; x+=20)
+			{
+				int xx = x + (rand() % 30 - 15);
+				int zz = z + (rand() % 30 - 15);
+				xx = std::max(1, std::min(xx, NUMGRIDX));
+				zz = std::max(1, std::min(zz, NUMGRIDZ));
+				// int height = NUMGRIDY/2.0-10;
+				int height = ground->getHeight(xx-1, zz-1) + 2;
+				type[IX(xx, height, zz)] = type0[IX(xx, height, zz)] = FLUIDIN;
+				fillParticleInGrid(xx, height, zz);
+				Vy[IX(xx, height, zz)] = Vy[IX(xx, height+1, zz)] = (rand() % 3 + 1) / 10.0;
+			}
 	}
 
 	if(FLOWINTYPE.compare("TOP") == 0)
@@ -300,19 +348,29 @@ void FluidCube3D::addFlowIn()
 
 void FluidCube3D::simulate()
 {
-	clock_t start = clock();
+	clock_t start, current = clock();
 
 	bool draw = calculateTimeStep();
 	
 	addFlowIn();
+	LOG << "addFlowIn "<< (clock() - current) / 1e6 << "s\n";
+	current = clock();
 
 	updateParticles();
-	
+	LOG << "updateParticles "<< (clock() - current) / 1e6 << "s\n";
+	current = clock();
+
 	updateGrid();
-	
+	LOG << "updateGrid "<< (clock() - current) / 1e6 << "s\n";
+	current = clock();
+
 	set_bnd();
-	
+	LOG << "set_bnd "<< (clock() - current) / 1e6 << "s\n";
+	current = clock();
+
 	vel_step();
+	LOG << "vel_step "<< (clock() - current) / 1e6 << "s\n";
+	current = clock();
 
 	clock_t simTime = clock() - start;
 	report(simTime);
@@ -330,27 +388,29 @@ void FluidCube3D::vel_step()
 {
 	if(fluidNum == 0)
 		return; 
-	/*
-	SWAP(Vx0, Vx);
-	SWAP(Vy0, Vy);
-	SWAP(Vz0, Vz);
-	diffuseVelosity();
-	set_bnd();
-	*/
+	
+	clock_t start, current = clock();
 
 	SWAP(Vx0, Vx);
 	SWAP(Vy0, Vy);
 	SWAP(Vz0, Vz);
 	advectVelosity();
 	set_bnd();
+	LOG << "advectVelosity "<< (clock() - current) / 1e6 << "s\n";
+	current = clock();
 
 	addForce();
 	set_bnd();
+	LOG << "addForce "<< (clock() - current) / 1e6 << "s\n";
+	current = clock();
 
 	projectVelosity();
+	LOG << "projectVelosity "<< (clock() - current) / 1e6 << "s\n";
+	current = clock();
 
 	extrapolate();
 	set_bnd();
+	LOG << "extrapolate "<< (clock() - current) / 1e6 << "s\n";
 
 	//errorRemove();
 }
@@ -1061,6 +1121,9 @@ void FluidCube3D::updateParticles()
 		float y1 = y0 + dt * v0.y * hi;
 		float z1 = z0 + dt * v0.z * hi;
 
+		if (x1 < 1 || x1 > NUMGRIDX || y1 < 1 || y1 > NUMGRIDY || z1 < 1 || z1 > NUMGRIDZ)
+			continue;
+
 		if(type[IX(int(x1), int(y1), int(z1))] == AIR)
 		{
 			particles_new.push_back(Pos3D(x1, y1, z1));
@@ -1092,6 +1155,9 @@ void FluidCube3D::updateParticles()
 		y1 = y0 + dt * 0.5 * (v0.y + v1.y) * hi;
 		z1 = z0 + dt * 0.5 * (v0.z + v1.z) * hi;
 
+		if (x1 < 1 || x1 > NUMGRIDX || y1 < 1 || y1 > NUMGRIDY || z1 < 1 || z1 > NUMGRIDZ)
+			continue;
+
 		if(type[IX(int(x1), int(y1), int(z1))] == SOLID)
 		{
 			if(int(x1) > int(x0))
@@ -1117,12 +1183,13 @@ void FluidCube3D::updateParticles()
 
 void FluidCube3D::updateGrid()
 {
+	clock_t start, current = clock();
+
 	//swap 
 	GridType *tmp = type;
 	type = type0;
 	type0 = tmp;
 
-#pragma omp parallel for
 	for(int z = 1; z <= NUMGRIDZ; z++)
 		for(int y = 1; y <= NUMGRIDY; y++)
 			for(int x = 1; x <= NUMGRIDX; x++)
@@ -1135,6 +1202,9 @@ void FluidCube3D::updateGrid()
 				layer[IX(x, y, z)] = -1;
 			}
 
+	LOG << "seg 0 "<< (clock() - current) / 1e6 << "s\n";
+	current = clock();
+
 	for(unsigned i = 0; i < particles.size(); i++)
 	{
 		int x = int(particles[i].x);
@@ -1144,10 +1214,16 @@ void FluidCube3D::updateGrid()
 		layer[IX(x, y, z)] = 0;
 		invertedList[IX(x, y, z)]->push_back(i);
 	}
+
+	LOG << "seg 1 "<< (clock() - current) / 1e6 << "s\n";
+	current = clock();
 	
 	fluidNum = 0;
 	for(int i = 0; i < NUMGRID; i++)
 		pos2index[i] = -1;
+
+	LOG << "seg 2 "<< (clock() - current) / 1e6 << "s\n";
+	current = clock();
 
 // #pragma omp parallel for (this loop cannot be paralleled)
 	for(int z = 1; z <= NUMGRIDZ; z++)
@@ -1155,6 +1231,9 @@ void FluidCube3D::updateGrid()
 			for(int x = 1; x <= NUMGRIDX; x++)
 				if(type[IX(x, y, z)] == FLUID)
 					pos2index[IX(x, y, z)] = fluidNum++;
+
+	LOG << "seg 3 "<< (clock() - current) / 1e6 << "s\n";
+	current = clock();
 
 	if(fluidNum == 0)
 		return; 
@@ -1270,7 +1349,7 @@ void FluidCube3D::updateGrid()
 				Vy[IX(x, y, z)] = velosities[pid].y * downRate;
 				//Vy[IX(x, y, z)] = getVelosity(2, particles[pid].x, particles[pid].y, particles[pid].z, Vy);
 
-				//Vy
+				//Vz
 				dist = 100;
 				list = invertedList[IX(x, y, z)];
 				for(unsigned i = 0; i < list->size(); i++)
@@ -1316,6 +1395,8 @@ void FluidCube3D::updateGrid()
 
 		}
 
+	LOG << "seg 4 "<< (clock() - current) / 1e6 << "s\n";
+	current = clock();
 
 	//init Matrix
 	A = Eigen::SparseMatrix<double>(fluidNum, fluidNum);         // default is column major
@@ -1348,8 +1429,13 @@ void FluidCube3D::updateGrid()
 				}
 				index ++;
 			}
+	LOG << "seg 5 "<< (clock() - current) / 1e6 << "s\n";
+	current = clock();
+
 	A.makeCompressed();
 	solver.compute(A);
+	LOG << "seg 6 "<< (clock() - current) / 1e6 << "s\n";
+	current = clock();
 }
 
 void FluidCube3D::extrapolate()
@@ -1367,9 +1453,10 @@ void FluidCube3D::extrapolate()
 
 	//make sure all the fluid cell with layer = 0, others = -1
 	int iter = int(max_v * dt * hi) + 2;
+	REPORT(iter);
 
 #pragma omp parallel for
-	for(int k = 1; k <= iter; k++)
+	for(int k = 1; k <= 3; k++)
 	{
 		int start[3], end[3], du[3];
 		int maxu[3] = {NUMGRIDX, NUMGRIDY, NUMGRIDZ};
@@ -1777,10 +1864,12 @@ void FluidCube3D::createBlobbySurface()
 	int blobbyGridSize = 1;
 	assert(Configer::getConfiger()->getInt("Blobby", "GridSize", blobbyGridSize));
 
-	double r = 1.0 * blobbyGridSize / PARTICLEPERGRID;
-	double h = 3 * r;
-	double h2i = 1 / (h*h);
-	double thresh = blobbyKernel( (r*r) / (h*h) );
+	double blobbyRadius = 1.0 * blobbyGridSize / PARTICLEPERGRID;
+	// assert(Configer::getConfiger()->getDouble("Blobby", "Radius", blobbyRadius));
+
+	double blobbyH = 3 * blobbyRadius;
+	double blobbyH2i = 1 / (blobbyH * blobbyH);
+	double thresh = blobbyKernel( (blobbyRadius * blobbyRadius) / (blobbyH * blobbyH) );
 	
 	int border = 6;
 	float *scalarField = new float [(NUMGRIDX+border) * (NUMGRIDY+border) * (NUMGRIDZ+border) * blobbyGridSize * blobbyGridSize * blobbyGridSize]; 
@@ -1829,8 +1918,8 @@ void FluidCube3D::createBlobbySurface()
 						float x0 = (particles[list->at(j)].x + border/2) * blobbyGridSize;
 						float y0 = (particles[list->at(j)].y + border/2) * blobbyGridSize;
 						float z0 = (particles[list->at(j)].z + border/2) * blobbyGridSize;
-						F += blobbyKernel(DISTANCE2(x0, y0, z0, x, y, z) * h2i);
-						//double ker = blobbyKernel(DISTANCE2(x0, y0, z0, x, y, z) * h2i);
+						F += blobbyKernel(DISTANCE2(x0, y0, z0, x, y, z) * blobbyH2i);
+						//double ker = blobbyKernel(DISTANCE2(x0, y0, z0, x, y, z) * blobbyH2i);
 						//Xu += ker * Eigen::Vector3d(x0, y0, z0);
 						//ru += ker * r; //for simple use the average r, but the radii to the closest particle is better
 						//F += ker;

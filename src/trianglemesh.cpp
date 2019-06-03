@@ -1,11 +1,12 @@
-#include "quadmesh.h"
+#include "trianglemesh.h"
 #include "Configer.h"
 #include "Logger.h"
 #include <fstream>
 #include <memory.h>
+#include <math.h>
 
 
-QuadMesh::QuadMesh()
+TriangleMesh::TriangleMesh()
 {	
 	num_vertex_ = 0;
 	num_vertex_uv_ = 0;
@@ -13,7 +14,7 @@ QuadMesh::QuadMesh()
 	num_face_ = 0;
 }
 
-QuadMesh::QuadMesh(std::string file_path)
+TriangleMesh::TriangleMesh(std::string file_path)
 {
 	num_vertex_ = 0;
 	num_vertex_uv_ = 0;
@@ -23,7 +24,7 @@ QuadMesh::QuadMesh(std::string file_path)
 	loadObj(file_path_);
 }
 
-void QuadMesh::loadObj(std::string file_path)
+void TriangleMesh::loadObj(std::string file_path)
 {
 
 	std::ifstream fin(file_path);
@@ -32,18 +33,20 @@ void QuadMesh::loadObj(std::string file_path)
 	char c1, c2;
 	std::string s;
 	float x, y, z;
-	int ids[12];
+	int ids[9];
 	while(fin >> c1)
 	{
 		if(c1 == 'f')
 		{
-			fin >> ids[0] >> c1 >> ids[4] >> c2 >> ids[8];
-			fin >> ids[1] >> c1 >> ids[5] >> c2 >> ids[9];
-			fin >> ids[2] >> c1 >> ids[6] >> c2 >> ids[10];
-			fin >> ids[3] >> c1 >> ids[7] >> c2 >> ids[11];
-			for(int i = 0; i < 12; i++)
+			// fin >> ids[0] >> c1 >> ids[3] >> c2 >> ids[6];
+			// fin >> ids[1] >> c1 >> ids[4] >> c2 >> ids[7];
+			// fin >> ids[2] >> c1 >> ids[5] >> c2 >> ids[8];
+			fin >> ids[0] >> c1 >> c2 >> ids[6];
+			fin >> ids[1] >> c1 >> c2 >> ids[7];
+			fin >> ids[2] >> c1 >> c2 >> ids[8];
+			for(int i = 0; i < 9; i++)
 				ids[i] -= 1;
-			faces_.push_back(QuadIdx(ids));
+			faces_.push_back(TriangleIdx(ids));
 			num_face_ ++;
 		}
 		else if(c1 == 'v')
@@ -83,7 +86,7 @@ void QuadMesh::loadObj(std::string file_path)
 	REPORT(num_face_);
 }
 
-void QuadMesh::dumpObj(std::string obj_path)
+void TriangleMesh::dumpObj(std::string obj_path)
 {
 	std::ofstream fout(obj_path);
 
@@ -115,8 +118,9 @@ void QuadMesh::dumpObj(std::string obj_path)
 	for(auto& f : faces_)
 	{
 		fout << "f";
-		for(int j = 0; j < 4; j++)
-			fout << ' ' << f.pt_id[j]+1 << '/' << f.vt_id[j]+1 << '/' << f.vn_id[j]+1;
+		for(int j = 0; j < 3; j++)
+			// fout << ' ' << f.pt_id[j]+1 << '/' << f.vt_id[j]+1 << '/' << f.vn_id[j]+1;
+			fout << ' ' << f.pt_id[j]+1 << '/' << '/' << f.vn_id[j]+1;
 		fout << "\n";
 	}
 	fout.close();
@@ -124,12 +128,11 @@ void QuadMesh::dumpObj(std::string obj_path)
 	LOG << "Dump obj file "<< obj_path.c_str() << "\n";
 }
 
-QuadMesh::~QuadMesh()
+TriangleMesh::~TriangleMesh()
 {
-	delete[] height_map_;
 }
 
-void QuadMesh::normalize(int max_length)
+void TriangleMesh::normalize(int max_length)
 {
 	max_length_ = max_length;
 	float min_x = 1e9, min_y = 1e9, min_z = 1e9;
@@ -144,7 +147,6 @@ void QuadMesh::normalize(int max_length)
 		max_z = std::max(max_z, v[2]);
 	}
 	float scale = 1.0f * max_length / std::max(std::max(max_x - min_x, max_y - min_y), max_z - min_z);
-	scale = 7;
 	Eigen::Vector3f shift(min_x * scale, min_y * scale, min_z * scale); 
 	REPORT(scale);
 	std::cout << shift << std::endl;
@@ -154,39 +156,26 @@ void QuadMesh::normalize(int max_length)
 	}
 }
 
-void QuadMesh::calculateHeightMap(int max_length)
+void TriangleMesh::refine()
 {
-	max_length_ = max_length;
-	height_map_ = new int[max_length_ * max_length_];
-	memset(height_map_, 0, sizeof(int) * max_length_ * max_length_);
-	for(auto& v : vertices_)
+	int n = 0;
+	std::vector<TriangleIdx> faces_refine;
+	for(auto& f : faces_)
 	{
-		int x = int(v[0]);
-		int y = int(v[1]);
-		int z = int(v[2]);
-		if(x < 0 || y < 0 || z < 0)
-			continue;
-		if(x >= max_length_ || y >= max_length_ || z >= max_length_)
-			continue;
-		height_map_[z * max_length_ + x] = std::max(height_map_[z * max_length_ + x], y);
-	}
-	// fill holes on the height_map
-	for(int j = 0; j < max_length_; j++)
-		for(int i = 0; i < max_length_; i++)
+   	 	// it.n = Normalize(Normal3f(Cross(p1 - p0, p2 - p0)));
+		Eigen::Vector3f u = vertices_[f.pt_id[1]] - vertices_[f.pt_id[0]]; 
+		Eigen::Vector3f v = vertices_[f.pt_id[2]] - vertices_[f.pt_id[0]]; 
+		Eigen::Vector3f cross = u.cross(v);
+		if(abs(cross.dot(cross)) < 1e-3)
 		{
-			if(height_map_[j * max_length_ + i] == 0)
-			{
-				for(int k = i; k < max_length_; k++)
-					if(height_map_[j * max_length_ + k] != 0)
-					{
-						height_map_[j * max_length_ + i] = height_map_[j * max_length_ + k];
-						break;
-					} 
-			}
+			// LOG << cross[0] << " " << cross[1] << " " << cross[2] << '\n';
+			n += 1;
 		}
-}
-
-int QuadMesh::getHeight(int x, int z)
-{
-	return height_map_[z * max_length_ + x];
+		else
+		{
+			faces_refine.push_back(f);
+		}
+	}
+	REPORT(n);
+	faces_ = faces_refine;
 }

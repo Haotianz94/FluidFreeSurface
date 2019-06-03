@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "fluidCube3D.h"
 #include "display.h"
+#include "trianglemesh.h"
 #include "quadmesh.h"
 #include <Eigen/Core>
 #include <omp.h>
@@ -12,10 +13,9 @@ int main(int argc, char* argv[])
 	Eigen::initParallel();
 
 	// std::string obj_path;
-	// assert(Configer::getConfiger()->getString("Simulation3D", "ObjectPath", obj_path));
-	// QuadMesh obstacle(obj_path);
-	// obstacle.normalize(100);
-	// obstacle.dumpObj("../obj/volcano_subdiv_03_tall_100.obj");
+	// TriangleMesh mesh("../obj/lava_right.obj");
+	// mesh.refine();
+	// mesh.dumpObj("../obj/lava_right_refine.obj");
 	// return 0;
 
 	bool CREATEBLOBBY;

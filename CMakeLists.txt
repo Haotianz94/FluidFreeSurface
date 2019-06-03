@@ -15,6 +15,7 @@ SET(PROJECT_HEADER
         ${PROJECT_SOURCE_DIR}/include/fluidCube3D.h
         ${PROJECT_SOURCE_DIR}/include/Configer.h
         ${PROJECT_SOURCE_DIR}/include/Logger.h
+        ${PROJECT_SOURCE_DIR}/include/trianglemesh.h
         ${PROJECT_SOURCE_DIR}/include/quadmesh.h)
 
 SET(PROJECT_SRC
@@ -27,6 +28,7 @@ SET(PROJECT_SRC
         ${PROJECT_SOURCE_DIR}/src/Configer.cpp
         ${PROJECT_SOURCE_DIR}/src/Logger.cpp
         ${PROJECT_SOURCE_DIR}/src/quadmesh.cpp
+        ${PROJECT_SOURCE_DIR}/src/trianglemesh.cpp
         ${PROJECT_SOURCE_DIR}/src/main.cpp)
 
 INCLUDE_DIRECTORIES(include)

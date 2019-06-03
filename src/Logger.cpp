@@ -11,7 +11,7 @@ using namespace std;
 using namespace cv;
 
 Logger* Logger::_logger = NULL;
-bool Logger::out_to_file = false;
+bool Logger::out_to_file = true;
 bool Logger::out_to_console = true;
 
 Logger::Logger()
