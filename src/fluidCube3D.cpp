@@ -258,8 +258,8 @@ void FluidCube3D::addFlowIn()
 				Vy[IX(x, height, z)] = Vy[IX(x, height+1, z)] = 4;
 			}
 
-		// for(int z = NUMGRIDZ/2.0 - 50; z <= NUMGRIDZ/2.0 + 50; z+=1)
-		// 	for(int x = NUMGRIDX/2.0 - 50; x <= NUMGRIDX/2.0 + 50; x+=1)
+		// for(int z = NUMGRIDZ/2.0 - 80; z <= NUMGRIDZ/2.0 + 20; z+=1)
+		// 	for(int x = NUMGRIDX/2.0 - 60; x <= NUMGRIDX/2.0 + 40; x+=1)
 		// 	{
 		// 		int height = volcano->getHeight(x-1, z-1) + 2;
 		// 		type[IX(x, height, z)] = type0[IX(x, height, z)] = FLUIDIN;

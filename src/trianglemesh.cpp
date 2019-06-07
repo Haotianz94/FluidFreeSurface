@@ -38,12 +38,12 @@ void TriangleMesh::loadObj(std::string file_path)
 	{
 		if(c1 == 'f')
 		{
-			// fin >> ids[0] >> c1 >> ids[3] >> c2 >> ids[6];
-			// fin >> ids[1] >> c1 >> ids[4] >> c2 >> ids[7];
-			// fin >> ids[2] >> c1 >> ids[5] >> c2 >> ids[8];
-			fin >> ids[0] >> c1 >> c2 >> ids[6];
-			fin >> ids[1] >> c1 >> c2 >> ids[7];
-			fin >> ids[2] >> c1 >> c2 >> ids[8];
+			//fin >> ids[0] >> c1 >> ids[3] >> c2 >> ids[6];
+			//fin >> ids[1] >> c1 >> ids[4] >> c2 >> ids[7];
+			//fin >> ids[2] >> c1 >> ids[5] >> c2 >> ids[8];
+			 fin >> ids[0] >> c1 >> c2 >> ids[6];
+			 fin >> ids[1] >> c1 >> c2 >> ids[7];
+			 fin >> ids[2] >> c1 >> c2 >> ids[8];
 			for(int i = 0; i < 9; i++)
 				ids[i] -= 1;
 			faces_.push_back(TriangleIdx(ids));
@@ -98,9 +98,9 @@ void TriangleMesh::dumpObj(std::string obj_path)
 		fout << "v " << v[0] << ' ' << v[1] << ' ' << v[2] << "\n";
 
 	// Dump UV vertices
-	fout << "# uv vertices " << num_vertex_uv_ << "\n";
-	for(auto& vt : vertices_uv_)
-		fout << "vt " << vt[0] << ' ' << vt[1] << ' ' << vt[2] << "\n";
+	// fout << "# uv vertices " << num_vertex_uv_ << "\n";
+	// for(auto& vt : vertices_uv_)
+	// 	fout << "vt " << vt[0] << ' ' << vt[1] << ' ' << vt[2] << "\n";
 	
 	
 	// Dump normal

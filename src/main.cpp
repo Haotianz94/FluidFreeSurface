@@ -8,15 +8,16 @@
 
 int main(int argc, char* argv[])
 {
-	omp_set_num_threads(16);
-	Eigen::setNbThreads(16);
-	Eigen::initParallel();
+	 omp_set_num_threads(16);
+	 Eigen::setNbThreads(16);
+	 Eigen::initParallel();
 
-	// std::string obj_path;
-	// TriangleMesh mesh("../obj/lava_right.obj");
+	 // std::string obj_path;
+	 // assert(Configer::getConfiger()->getString("Volcano", "ObjectPath", obj_path));
+	 // QuadMesh mesh(obj_path);
 	// mesh.refine();
 	// mesh.dumpObj("../obj/lava_right_refine.obj");
-	// return 0;
+	 // return 0;
 
 	bool CREATEBLOBBY;
 	assert(Configer::getConfiger()->getBool("Base", "CreateBlobby", CREATEBLOBBY));

@@ -144,7 +144,6 @@ void QuadMesh::normalize(int max_length)
 		max_z = std::max(max_z, v[2]);
 	}
 	float scale = 1.0f * max_length / std::max(std::max(max_x - min_x, max_y - min_y), max_z - min_z);
-	scale = 7;
 	Eigen::Vector3f shift(min_x * scale, min_y * scale, min_z * scale); 
 	REPORT(scale);
 	std::cout << shift << std::endl;

@@ -16,7 +16,7 @@ struct TriangleIdx
 		for(int i = 0; i < 3; i++)
 			vt_id[i] = ids[i+3];
 		for(int i = 0; i < 3; i++)
-			vn_id[i] = ids[i+9];
+			vn_id[i] = ids[i+6];
 	}
 };
 
