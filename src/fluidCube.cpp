@@ -23,8 +23,8 @@ FluidCube::FluidCube()
 	assert(Configer::getConfiger()->getInt(simulationStr.c_str(), "MaxIteration", MAXITERATION));
 	assert(Configer::getConfiger()->getString(simulationStr.c_str(), "RenderType", renderTypeStr));
 	assert(Configer::getConfiger()->getString(simulationStr.c_str(), "SceneType", SCENETYPE)); 
-	assert(Configer::getConfiger()->getString(simulationStr.c_str(), "ObstacleType", OBSTACLETYPE)); 
-	assert(Configer::getConfiger()->getString(simulationStr.c_str(), "FlowInType", FLOWINTYPE)); 
+	// assert(Configer::getConfiger()->getString(simulationStr.c_str(), "ObstacleType", OBSTACLETYPE)); 
+	// assert(Configer::getConfiger()->getString(simulationStr.c_str(), "FlowInType", FLOWINTYPE)); 
 
 	// RenderType
 	if(renderTypeStr.compare("PARTICLE") == 0)
