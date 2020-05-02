@@ -180,7 +180,7 @@ FluidCube2D::FluidCube2D()
 		exit(0);
 	}
 
-	if(OBSTACLETYPE.compare("CENTERWALL"))
+	if(OBSTACLETYPE.compare("CENTERWALL") == 0)
 	{
 		//int cx = NUMGRIDW / 2.0;
 		//int cy = NUMGRIDH / 4.0;
@@ -318,7 +318,7 @@ void FluidCube2D::projectVelosity()
 	//set_bnd(0, div);
 	//set_bnd(0, p);
 	
-	for(int k = 0; k < ITERATION; k++)
+	for(int k = 0; k < MAXITERATION; k++)
 	{
 		for(int y = 1; y <= NUMGRIDH; y++)
 			for(int x = 1; x <= NUMGRIDW; x++)
@@ -445,7 +445,7 @@ void FluidCube2D::diffuse(int b, float *u0, float *u, float diffusion)
 	//Gauss Seidel relexation
 	//in this way, the initcial value for u may be important 
 	/*
-	for(int k = 0; k < ITERATION; k++)
+	for(int k = 0; k < MAXITERATION; k++)
 	{
 		for(int y = 1; y <= NUMGRIDH; y++)
 			for(int x = 1; x <= NUMGRIDW; x++)

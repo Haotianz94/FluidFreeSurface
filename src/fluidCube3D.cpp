@@ -476,7 +476,7 @@ void FluidCube3D::projectVelosity()
 				p[IX(x, y, z)] = 0;
 			}
 	
-	for(int k = 0; k < ITERATION; k++)
+	for(int k = 0; k < MAXITERATION; k++)
 	{
 		for(int z = 1; z <= NUMGRIDY; z++)
 			for(int y = 1; y <= NUMGRIDY; y++)
@@ -624,7 +624,7 @@ void FluidCube3D::diffuse(int b, float *u0, float *u, float diffusion)
 	//Gauss Seidel relexation
 	//in this way, the initcial value for u may be important 
 	/*
-	for(int k = 0; k < ITERATION; k++)
+	for(int k = 0; k < MAXITERATION; k++)
 	{
 		for(int z = 1; z <= NUMGRIDZ; z++)
 			for(int y = 1; y <= NUMGRIDY; y++)
